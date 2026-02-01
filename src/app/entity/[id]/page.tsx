@@ -9,8 +9,8 @@ import NewPostForm from '@/components/NewPostForm';
 import DeleteButton from '@/components/DeleteButton';
 import { deleteEntity, deletePost } from '@/app/actions';
 import FeatureButton from '@/components/FeatureButton';
-// NEW IMPORT
 import EntityEditableBlock from '@/components/EntityEditableBlock';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +51,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
   const parseContent = (htmlString: string) => {
     return parse(htmlString, {
       replace: (domNode) => {
+        // CASE 1: Standard Links (<a>)
         if (domNode.type === 'tag' && domNode.name === 'a') {
           const href = domNode.attribs.href;
           const title = domNode.attribs.title;
@@ -72,6 +73,26 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
               <EntityLink id={entityId} name={title || 'Entity'}>
                 {/* @ts-ignore */}
                 {domToReact(domNode.children)}
+              </EntityLink>
+            );
+          }
+        }
+
+        // CASE 2: Tiptap Mentions (<span data-type="mention">)
+        if (
+          domNode.type === 'tag' && 
+          domNode.name === 'span' && 
+          domNode.attribs['data-type'] === 'mention'
+        ) {
+          const id = parseInt(domNode.attribs['data-id']);
+          const label = domNode.attribs['data-label'];
+
+          if (id) {
+            // UPDATED: No green span, no "@" symbol.
+            // Just a clean EntityLink using the saved label.
+            return (
+              <EntityLink id={id} name={label || 'Entity'}>
+                {label}
               </EntityLink>
             );
           }

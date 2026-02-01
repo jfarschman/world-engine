@@ -2,7 +2,7 @@
 
 import { updateEntity } from '@/app/actions';
 import { useState } from 'react';
-import RichTextEditor from './RichTextEditor'; // Import the new editor
+import RichTextEditor from './RichTextEditor';
 
 interface EntityEditFormProps {
   entity: {
@@ -14,11 +14,24 @@ interface EntityEditFormProps {
   onCancel: () => void;
 }
 
+const processInitialContent = (content: string | null) => {
+  if (!content) return '';
+
+  // Regex to find [type:id|Label] patterns
+  return content.replace(
+    /\[(character|location|organisation|family|race|note|post|item|entity):(\d+)\|([^\]]+)\]/gi,
+    (match, type, id, label) => {
+      // UPDATED: No '@' symbol in the text content
+      return `<span data-type="mention" class="bg-green-100 text-green-800 rounded px-1 py-0.5 font-medium decoration-clone" data-id="${id}" data-label="${label}">${label}</span>`;
+    }
+  );
+};
+
 export default function EntityEditForm({ entity, onCancel }: EntityEditFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   
-  // Track the content here so we can put it in the hidden input
-  const [entryContent, setEntryContent] = useState(entity.entry || '');
+  // Hydrate the editor with processed content (Shortcodes -> Mentions)
+  const [entryContent, setEntryContent] = useState(processInitialContent(entity.entry));
 
   const handleSubmit = async (formData: FormData) => {
     setIsSaving(true);
@@ -31,7 +44,7 @@ export default function EntityEditForm({ entity, onCancel }: EntityEditFormProps
     <form action={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
       <input type="hidden" name="id" value={entity.id} />
       
-      {/* HIDDEN INPUT: This carries the editor data to the Server Action */}
+      {/* Hidden input carries the HTML content */}
       <input type="hidden" name="entry" value={entryContent} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -65,7 +78,6 @@ export default function EntityEditForm({ entity, onCancel }: EntityEditFormProps
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">Entry</label>
         
-        {/* Replace the textarea with our new Editor */}
         <RichTextEditor 
           content={entryContent} 
           onChange={(html) => setEntryContent(html)} 

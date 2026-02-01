@@ -1,10 +1,15 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
+import Mention from '@tiptap/extension-mention';
 import { useEffect } from 'react';
+import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
+import MentionList from './MentionList';
 
+// Toolbar Button Component
 const ToolbarButton = ({ 
   onClick, 
   isActive, 
@@ -34,15 +39,90 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ content, onChange }: RichTextEditorProps) {
   const editor = useEditor({
-    // --- THE FIX IS HERE ---
-    immediatelyRender: false, 
-    // -----------------------
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
           class: 'text-blue-600 underline cursor-pointer',
+        },
+      }),
+      Mention.configure({
+        HTMLAttributes: {
+          class: 'bg-green-100 text-green-800 rounded px-1 py-0.5 font-medium decoration-clone',
+        },
+        renderLabel({ options, node }) {
+          // Renders the label without the '@' symbol inside the editor
+          return `${node.attrs.label ?? node.attrs.id}`;
+        },
+        suggestion: {
+          // This command determines what happens when you press Enter on a name
+          command: ({ editor, range, props }) => {
+            editor
+              .chain()
+              .focus()
+              .insertContentAt(range, [
+                {
+                  type: 'mention',
+                  attrs: props, // props contains { id, label }
+                },
+                {
+                  type: 'text',
+                  text: ' ', // Adds a space after the mention
+                },
+              ])
+              .run();
+          },
+          items: async ({ query }) => {
+            if (query.length < 3) return [];
+            const res = await fetch(`/api/mentions?query=${query}`);
+            return await res.json();
+          },
+          render: () => {
+            let component: ReactRenderer<any>;
+            let popup: any;
+
+            return {
+              onStart: (props) => {
+                component = new ReactRenderer(MentionList, {
+                  props,
+                  editor: props.editor,
+                });
+
+                if (!props.clientRect) return;
+
+                popup = tippy('body', {
+                  getReferenceClientRect: props.clientRect as any,
+                  appendTo: () => document.body,
+                  content: component.element,
+                  showOnCreate: true,
+                  interactive: true,
+                  trigger: 'manual',
+                  placement: 'bottom-start',
+                });
+              },
+              onUpdate(props) {
+                component.updateProps(props);
+                if (!props.clientRect) return;
+                popup[0].setProps({
+                  getReferenceClientRect: props.clientRect,
+                });
+              },
+              onKeyDown(props) {
+                if (props.event.key === 'Escape') {
+                  popup[0].hide();
+                  return true;
+                }
+                // @ts-ignore
+                return component.ref?.onKeyDown(props);
+              },
+              onExit() {
+                popup[0].destroy();
+                component.destroy();
+              },
+            };
+          },
         },
       }),
     ],
@@ -59,7 +139,7 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
 
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      // safe to leave empty if you only want one-way binding for now
+      // safe to leave empty if only one-way sync is needed
     }
   }, [content, editor]);
 
