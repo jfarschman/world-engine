@@ -35,9 +35,12 @@ export default function SearchClient() {
   }, [query]);
 
   useEffect(() => {
-    const currentParams = new URLSearchParams(window.location.search);
-    if (query !== currentParams.get('q')) {
-       router.replace(`/search?q=${encodeURIComponent(query)}`);
+    // Check if window exists to be safe, though 'use client' handles this
+    if (typeof window !== 'undefined') {
+      const currentParams = new URLSearchParams(window.location.search);
+      if (query !== currentParams.get('q')) {
+         router.replace(`/search?q=${encodeURIComponent(query)}`);
+      }
     }
   }, [query, router]);
 
