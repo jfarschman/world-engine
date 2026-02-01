@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Entity {
+  id           Int           @id @default(autoincrement())
+  name         String
+  type         String
+  entry        String?       @db.Text
+  image_uuid   String?
+  image_ext    String?       // Add this line
+  is_private   Boolean       @default(false)
+  is_featured  Boolean       @default(false)
+  parentId     Int?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  character    Character?
+  parent       Entity?       @relation("EntityNesting", fields: [parentId], references: [id])
+  children     Entity[]      @relation("EntityNesting")
+  posts        Post[]
+  family       Family?
+  item         Item?
+  journal      Journal?
+  location     Location?
+  mentions     Mention[]     @relation("MentionSource")
+  mentionedIn  Mention[]     @relation("MentionTarget")
+  note         Note?
+  relationshipsOut Relationship[] @relation("RelSource")
+  relationshipsIn  Relationship[] @relation("RelTarget")
+  organisation Organisation?
+  race         Race?
+}
+
+model Character {
+  entityId      Int                  @id
+  age           String?
+  sex           String?
+  title         String?
+  is_dead       Boolean              @default(false)
+  raceId        Int?
+  entity        Entity               @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  race          Race?                @relation(fields: [raceId], references: [entityId])
+  families      FamilyMember[]
+  organisations OrganisationMember[]
+}
+
+model Location {
+  entityId     Int     @id
+  is_destroyed Boolean @default(false)
+  entity       Entity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+}
+
+model Item {
+  entityId Int     @id
+  price    String?
+  size     String?
+  weight   String?
+  entity   Entity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  entityId Int    @id
+  type     String? // Kanka sometimes has subtypes for notes
+  entity   Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+}
+
+model Organisation {
+  entityId   Int                  @id
+  is_defunct Boolean              @default(false)
+  entity     Entity               @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  members    OrganisationMember[]
+}
+
+model Family {
+  entityId   Int            @id
+  is_extinct Boolean        @default(false)
+  entity     Entity         @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  members    FamilyMember[]
+}
+
+model Race {
+  entityId   Int         @id
+  is_extinct Boolean     @default(false)
+  characters Character[]
+  entity     Entity      @relation(fields: [entityId], references: [id], onDelete: Cascade)
+}
+
+model Journal {
+  entityId Int       @id
+  date     DateTime?
+  entity   Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id        Int      @id
+  name      String
+  entry     String?  @db.Text
+  position  Int      @default(0)
+  entityId  Int
+  entity    Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+}
+
+model Relationship {
+  id        Int      @id @default(autoincrement())
+  sourceId  Int
+  targetId  Int
+  type      String   // e.g., "Rival", "Mentor", "Sibling"
+  attitude  Int?     // Kanka exports this sometimes (range -100 to 100)
+  source    Entity   @relation("RelSource", fields: [sourceId], references: [id])
+  target    Entity   @relation("RelTarget", fields: [targetId], references: [id])
+
+  @@index([sourceId])
+  @@index([targetId])
+}
+
+model OrganisationMember {
+  id             Int          @id @default(autoincrement())
+  characterId    Int
+  organisationId Int
+  role           String?
+  character      Character    @relation(fields: [characterId], references: [entityId])
+  organisation   Organisation @relation(fields: [organisationId], references: [entityId])
+}
+
+model FamilyMember {
+  id          Int       @id @default(autoincrement())
+  characterId Int
+  familyId    Int
+  character   Character @relation(fields: [characterId], references: [entityId])
+  family      Family    @relation(fields: [familyId], references: [entityId])
+}
+
+model Mention {
+  id       Int    @id @default(autoincrement())
+  sourceId Int
+  targetId Int
+  source   Entity @relation("MentionSource", fields: [sourceId], references: [id])
+  target   Entity @relation("MentionTarget", fields: [targetId], references: [id])
+}
