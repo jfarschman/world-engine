@@ -1,8 +1,8 @@
-// src/components/EntityEditForm.tsx
 'use client';
 
 import { updateEntity } from '@/app/actions';
 import { useState } from 'react';
+import RichTextEditor from './RichTextEditor'; // Import the new editor
 
 interface EntityEditFormProps {
   entity: {
@@ -16,19 +16,24 @@ interface EntityEditFormProps {
 
 export default function EntityEditForm({ entity, onCancel }: EntityEditFormProps) {
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Track the content here so we can put it in the hidden input
+  const [entryContent, setEntryContent] = useState(entity.entry || '');
 
   const handleSubmit = async (formData: FormData) => {
     setIsSaving(true);
     await updateEntity(formData);
     setIsSaving(false);
-    onCancel(); // Switch back to read mode
+    onCancel(); 
   };
 
   return (
     <form action={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
       <input type="hidden" name="id" value={entity.id} />
+      
+      {/* HIDDEN INPUT: This carries the editor data to the Server Action */}
+      <input type="hidden" name="entry" value={entryContent} />
 
-      {/* Header Inputs */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
@@ -57,19 +62,17 @@ export default function EntityEditForm({ entity, onCancel }: EntityEditFormProps
         </div>
       </div>
 
-      {/* Entry / Description */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Entry (HTML/Text)</label>
-        <textarea
-          name="entry"
-          defaultValue={entity.entry || ''}
-          rows={12}
-          className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+        <label className="block text-sm font-medium text-slate-700 mb-1">Entry</label>
+        
+        {/* Replace the textarea with our new Editor */}
+        <RichTextEditor 
+          content={entryContent} 
+          onChange={(html) => setEntryContent(html)} 
         />
-        <p className="text-xs text-slate-400 mt-1">Basic HTML tags are supported.</p>
+        
       </div>
 
-      {/* Action Buttons */}
       <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
         <button
           type="button"
@@ -82,7 +85,7 @@ export default function EntityEditForm({ entity, onCancel }: EntityEditFormProps
         <button
           type="submit"
           disabled={isSaving}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
         >
           {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
