@@ -35,7 +35,6 @@ export default function SearchClient() {
   }, [query]);
 
   useEffect(() => {
-    // Only update URL if query changes to avoid infinite loops or overwriting
     const currentParams = new URLSearchParams(window.location.search);
     if (query !== currentParams.get('q')) {
        router.replace(`/search?q=${encodeURIComponent(query)}`);
