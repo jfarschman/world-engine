@@ -98,7 +98,7 @@ model Journal {
 }
 
 model Post {
-  id        Int      @id
+  id        Int      @id @default(autoincrement())
   name      String
   entry     String?  @db.Text
   position  Int      @default(0)
