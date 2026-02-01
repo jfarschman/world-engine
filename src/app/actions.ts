@@ -137,7 +137,7 @@ export async function createPost(formData: FormData) {
   if (!name || isNaN(entityId)) throw new Error('Invalid Post Data');
 
   await prisma.post.create({
-    data: { name, entry, isPrivate, entityId, position: 0 } // Fixed camelCase isPrivate
+    data: { name, entry, entityId, position: 0 }
   });
 
   revalidatePath(`/entity/${entityId}`);
