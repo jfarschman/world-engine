@@ -2,9 +2,8 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { UserGroupIcon, MapIcon, SparklesIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
-import { resolveKankaMentions } from '@/lib/utils';
-import parse, { domToReact } from 'html-react-parser';
-import EntityLink from '@/components/EntityLink';
+// NEW IMPORT:
+import RichTextRenderer from '@/components/RichTextRenderer';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,39 +30,6 @@ export default async function Dashboard() {
     notes: await prisma.note.count(),
   };
 
-  // --- PARSER LOGIC ---
-  const parseContent = (htmlString: string) => {
-    return parse(htmlString, {
-      replace: (domNode) => {
-        if (domNode.type === 'tag' && domNode.name === 'a') {
-          const href = domNode.attribs.href;
-          const title = domNode.attribs.title;
-          
-          let entityId = null;
-
-          if (title) {
-            const titleMatch = title.match(/[:#](\d+)/); 
-            if (titleMatch) entityId = parseInt(titleMatch[1]);
-          }
-
-          if (!entityId && href) {
-             const hrefMatch = href.match(/entity\/(\d+)/); 
-             if (hrefMatch) entityId = parseInt(hrefMatch[1]);
-          }
-
-          if (entityId) {
-            return (
-              <EntityLink id={entityId} name={title || 'Entity'}>
-                {/* @ts-ignore */}
-                {domToReact(domNode.children)}
-              </EntityLink>
-            );
-          }
-        }
-      }
-    });
-  };
-
   return (
     <div className="space-y-12">
       
@@ -73,7 +39,7 @@ export default async function Dashboard() {
         <p className="mt-2 text-slate-500">Welcome back, Dungeon Master.</p>
       </div>
 
-      {/* 1. FEATURED / HONOR CARDS (Priority #1) */}
+      {/* 1. FEATURED / HONOR CARDS */}
       {featuredEntities.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-slate-800 flex items-center">
@@ -82,57 +48,52 @@ export default async function Dashboard() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {featuredEntities.map(entity => {
-              const htmlContent = entity.entry ? resolveKankaMentions(entity.entry) : '';
-              
-              return (
-                <div 
-                  key={entity.id} 
-                  className="group flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg hover:border-blue-300 transition-all h-full"
-                >
-                  {/* IMAGE HEADER (16:9 Aspect Ratio) */}
-                  <Link href={`/entity/${entity.id}`} className="block relative w-full aspect-video bg-slate-800 overflow-hidden">
-                    {entity.image_uuid ? (
-                      <img 
-                        src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
-                        className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
-                        alt={entity.name}
-                      />
-                    ) : (
-                      // Fallback Gradient
-                      <div className="w-full h-full opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-100 via-slate-400 to-slate-900"></div>
-                    )}
-                    
-                    {/* TITLE OVERLAY */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-12">
-                       <h3 className="text-xl font-bold text-white leading-tight group-hover:text-blue-200">
-                         {entity.name}
-                       </h3>
-                       <span className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                         {entity.type}
-                       </span>
-                    </div>
-                  </Link>
-
-                  {/* CONTENT PREVIEW (Fixed Height + Fade Out) */}
-                  <div className="relative p-4 flex-1">
-                    <div className="h-40 overflow-hidden prose prose-sm prose-slate max-w-none text-slate-600">
-                      {parseContent(htmlContent)}
-                    </div>
-                    {/* The Fade Out Effect */}
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
-                  </div>
+            {featuredEntities.map(entity => (
+              <div 
+                key={entity.id} 
+                className="group flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg hover:border-blue-300 transition-all h-full"
+              >
+                {/* IMAGE HEADER */}
+                <Link href={`/entity/${entity.id}`} className="block relative w-full aspect-video bg-slate-800 overflow-hidden">
+                  {entity.image_uuid ? (
+                    <img 
+                      src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
+                      className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                      alt={entity.name}
+                    />
+                  ) : (
+                    <div className="w-full h-full opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-100 via-slate-400 to-slate-900"></div>
+                  )}
                   
-                  {/* FOOTER */}
-                  <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 text-xs text-slate-400 font-medium flex justify-between z-10 relative">
-                     <span>Updated {new Date(entity.updatedAt).toLocaleDateString()}</span>
-                     <Link href={`/entity/${entity.id}`} className="group-hover:translate-x-1 transition-transform text-blue-500 font-bold">
-                       Open File &rarr;
-                     </Link>
+                  {/* TITLE OVERLAY */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-12">
+                      <h3 className="text-xl font-bold text-white leading-tight group-hover:text-blue-200">
+                        {entity.name}
+                      </h3>
+                      <span className="text-xs font-bold uppercase tracking-widest text-slate-300">
+                        {entity.type}
+                      </span>
                   </div>
+                </Link>
+
+                {/* CONTENT PREVIEW */}
+                <div className="relative p-4 flex-1">
+                  <div className="h-40 overflow-hidden prose prose-sm prose-slate max-w-none text-slate-600">
+                    {/* HERE IS THE FIX: */}
+                    <RichTextRenderer content={entity.entry} />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                 </div>
-              );
-            })}
+                
+                {/* FOOTER */}
+                <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 text-xs text-slate-400 font-medium flex justify-between z-10 relative">
+                    <span>Updated {new Date(entity.updatedAt).toLocaleDateString()}</span>
+                    <Link href={`/entity/${entity.id}`} className="group-hover:translate-x-1 transition-transform text-blue-500 font-bold">
+                      Open File &rarr;
+                    </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -170,7 +131,7 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* 3. STATS (Moved to Bottom) */}
+      {/* 3. STATS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-8 border-t border-slate-200">
         <StatCard label="Characters" value={stats.chars} icon={UserGroupIcon} color="blue" />
         <StatCard label="Locations" value={stats.locs} icon={MapIcon} color="green" />
