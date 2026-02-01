@@ -3,14 +3,14 @@ import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import JournalSession from '@/components/JournalSession';
 import { resolveKankaMentions } from '@/lib/utils';
-import parse, { domToReact } from 'html-react-parser'; // Removed unused Element
+import parse, { domToReact } from 'html-react-parser';
 import EntityLink from '@/components/EntityLink';
 import NewPostForm from '@/components/NewPostForm';
 import DeleteButton from '@/components/DeleteButton';
 import { deleteEntity, deletePost } from '@/app/actions';
 import FeatureButton from '@/components/FeatureButton';
 import EntityEditableBlock from '@/components/EntityEditableBlock';
-
+import EditButton from '@/components/EditButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +51,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
   const parseContent = (htmlString: string) => {
     return parse(htmlString, {
       replace: (domNode) => {
-        // CASE 1: Standard Links (<a>)
         if (domNode.type === 'tag' && domNode.name === 'a') {
           const href = domNode.attribs.href;
           const title = domNode.attribs.title;
@@ -77,8 +76,8 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
             );
           }
         }
-
-        // CASE 2: Tiptap Mentions (<span data-type="mention">)
+        
+        // Handle Tiptap Mentions in Read-Only Mode
         if (
           domNode.type === 'tag' && 
           domNode.name === 'span' && 
@@ -88,8 +87,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           const label = domNode.attribs['data-label'];
 
           if (id) {
-            // UPDATED: No green span, no "@" symbol.
-            // Just a clean EntityLink using the saved label.
             return (
               <EntityLink id={id} name={label || 'Entity'}>
                 {label}
@@ -129,12 +126,9 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
     }
   };
 
-  // 3. RENDER
   return (
-    // WRAPPER STARTS HERE
     <EntityEditableBlock entity={entity} isLoggedIn={isLoggedIn}>
       
-      {/* The original content starts here */}
       <div className="space-y-6 pt-2">
         
         {/* HEADER SECTION */}
@@ -147,10 +141,18 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
              <h1 className="text-4xl font-extrabold text-slate-900">{entity.name}</h1>
            </div>
 
-           {/* MAIN DELETE BUTTON (Only if Logged In) */}
+           {/* ACTION BUTTONS (Only if Logged In) */}
            {isLoggedIn && (
             <div className="flex items-center space-x-2">
-              <FeatureButton id={entity.id} isFeatured={entity.is_featured} />
+               {/* 1. Feature Star */}
+               <FeatureButton id={entity.id} isFeatured={entity.is_featured} />
+               
+               {/* 2. NEW EDIT BUTTON */}
+               <EditButton 
+                 className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+               />
+
+               {/* 3. Delete Trash Can */}
                <DeleteButton 
                  id={entity.id} 
                  action={deleteEntity} 
@@ -178,16 +180,13 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                 Journal Entries & Logs
               </h3>
               
-              {/* The New Post Form (Only if Logged In) */}
               {isLoggedIn && <NewPostForm entityId={entity.id} />}
 
-              {/* Post List */}
               {entity.posts.length > 0 ? (
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 divide-y divide-slate-100">
                   {entity.posts.map(post => (
                     <div key={post.id} className="px-4 relative group">
                       
-                      {/* POST DELETE BUTTON (Only if Logged In + Hover) */}
                       {isLoggedIn && (
                          <div className="absolute top-4 right-12 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                             <DeleteButton 
@@ -243,7 +242,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
 
         </div>
       </div>
-    {/* WRAPPER ENDS HERE */}
     </EntityEditableBlock>
   );
 }
