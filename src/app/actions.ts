@@ -7,88 +7,92 @@ import { cookies } from 'next/headers';
 
 // --- CREATE ENTITY ---
 export async function createEntity(formData: FormData) {
+  'use server'; // Ensure this is marked as a server action
+
   const name = formData.get('name') as string;
   const type = formData.get('type') as string;
   const entry = formData.get('entry') as string;
+  const image_filename = formData.get('image_filename') as string;
   
-  // Image handling
-  const imageFilename = formData.get('image_filename') as string;
-  let image_uuid = null;
-  let image_ext = null;
-  
-  if (imageFilename && imageFilename.includes('.')) {
-    const parts = imageFilename.split('.');
-    image_ext = parts.pop();
-    image_uuid = parts.join('.');
-  }
-
-  if (!name || !type) throw new Error('Name and Type are required');
-
-  // ROBUST HELPER: Returns undefined if empty, or the number
-  const getInt = (key: string) => {
+  // Parse IDs safely (handle empty strings)
+  const parseId = (key: string) => {
     const val = formData.get(key);
-    // If val is empty string or null, return undefined (so Prisma skips it)
-    if (!val || val === '') return undefined;
-    const parsed = parseInt(val as string);
-    return isNaN(parsed) ? undefined : parsed;
+    return val ? parseInt(val as string) : undefined;
   };
 
-  // ROBUST HELPER: Returns undefined if empty string
-  const getString = (key: string) => {
-    const val = formData.get(key) as string;
-    if (!val || val.trim() === '') return undefined;
-    return val;
-  };
+  // 1. Prepare base Entity data
+  // We map 'location_id' from the form to 'parentId' on the Entity
+  const parentId = parseId('location_id') || parseId('parent_location_id');
 
-  let data: any = {
+  const entityData: any = {
     name,
     type,
-    entry,
-    image_uuid,
-    image_ext,
+    entry, // This now contains your HTML from the editor
+    parentId, // <-- This places the entity inside the location
+    image_uuid: image_filename ? image_filename.split('.')[0] : null,
+    image_ext: image_filename ? image_filename.split('.')[1] : null,
   };
 
-  switch (type) {
-    case 'Character':
-      data.character = {
-        create: {
-          title: getString('title'),
-          age: getString('age'),
-          sex: getString('sex'), // Now safe even if empty
-          is_dead: formData.get('is_dead') === 'on',
-          race_id: getInt('race_id'),       // Now safe
-          location_id: getInt('location_id'), // Now safe
-        }
-      };
-      break;
-    case 'Location':
-      data.location = {
-        create: {
-          parent_location_id: getInt('parent_location_id'),
-          is_destroyed: formData.get('is_destroyed') === 'on',
-        }
-      };
-      break;
-    case 'Organisation':
-      data.organisation = {
-        create: {
-          location_id: getInt('location_id'),
-          is_defunct: formData.get('is_defunct') === 'on',
-        }
-      };
-      break;
-     case 'Note':
-        data.note = {
-          create: {
-             type: formData.get('note_type') as string || 'General',
-          }
-        };
-        break;
+  // 2. Prepare Sub-Table data based on Type
+  if (type === 'Character') {
+    entityData.character = {
+      create: {
+        title: formData.get('title') as string,
+        age: formData.get('age') as string,
+        // Map form 'race_id' -> schema 'raceId'
+        raceId: parseId('race_id'), 
+      },
+    };
   }
 
-  const newEntity = await prisma.entity.create({ data });
+  if (type === 'Location') {
+    entityData.location = {
+      create: {
+        is_destroyed: formData.get('is_destroyed') === 'on',
+      },
+    };
+  }
 
-  revalidatePath('/');
+  if (type === 'Organisation') {
+    entityData.organisation = {
+      create: {
+        is_defunct: formData.get('is_defunct') === 'on',
+        // Organisations might not have a "location" in your schema 
+        // other than being nested in one via parentId above.
+      },
+    };
+  }
+
+  if (type === 'Family') {
+    entityData.family = {
+      create: {
+        is_extinct: formData.get('is_extinct') === 'on',
+      },
+    };
+  }
+
+  if (type === 'Race') {
+    entityData.race = {
+      create: {
+        is_extinct: formData.get('is_extinct') === 'on',
+      },
+    };
+  }
+
+  if (type === 'Note') {
+    entityData.note = {
+      create: {
+        type: formData.get('note_type') as string,
+      },
+    };
+  }
+
+  // 3. Database Call
+  const newEntity = await prisma.entity.create({
+    data: entityData,
+  });
+
+  // 4. Redirect to the new page
   redirect(`/entity/${newEntity.id}`);
 }
 
