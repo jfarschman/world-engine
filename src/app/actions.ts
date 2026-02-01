@@ -150,6 +150,29 @@ export async function deletePost(id: number) {
   revalidatePath(`/entity/${post.entityId}`);
 }
 
+export async function updateEntity(formData: FormData) {
+  const id = parseInt(formData.get('id') as string);
+  const name = formData.get('name') as string;
+  const type = formData.get('type') as string;
+  const entry = formData.get('entry') as string;
+  
+  // Basic validation
+  if (!id || !name) {
+    throw new Error('Missing required fields');
+  }
+
+  await prisma.entity.update({
+    where: { id },
+    data: {
+      name,
+      type,
+      entry,
+    },
+  });
+
+  revalidatePath(`/entity/${id}`);
+}
+
 export async function login(formData: FormData) {
   const password = formData.get('password') as string;
   if (password === process.env.DM_PASSWORD) {
