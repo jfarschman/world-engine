@@ -33,7 +33,7 @@ async function enrichModel(modelName: 'entity' | 'post') {
     let isDirty = false;
     
     // Replace tags with their "Enriched" version
-    const newEntry = r.entry.replace(TAG_REGEX, (match, type, idStr, existingLabel) => {
+    const newEntry = r.entry.replace(TAG_REGEX, (match: string, type: string, idStr: string, existingLabel: string | undefined) => {
       const id = parseInt(idStr);
       
       // Case A: Tag already has a label (e.g. [character:123|Calliope])
