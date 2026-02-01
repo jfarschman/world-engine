@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { createEntity } from '@/app/actions';
-// 1. Import useSearchParams
 import { useSearchParams } from 'next/navigation';
+// NEW IMPORT:
+import RichTextEditor from '@/components/RichTextEditor';
 
 interface SimpleEntity { id: number; name: string; }
 
@@ -16,10 +17,11 @@ interface FormProps {
 
 export default function EntityForm({ locations, races, families, orgs }: FormProps) {
   const searchParams = useSearchParams();
-  // 2. Default to URL param OR 'Character'
   const [type, setType] = useState(searchParams.get('type') || 'Character');
 
-  // Update state if URL changes (optional, but good for navigation)
+  // NEW STATE: Track the editor content
+  const [entryContent, setEntryContent] = useState('');
+
   useEffect(() => {
     const paramType = searchParams.get('type');
     if (paramType) setType(paramType);
@@ -51,10 +53,7 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
         <input type="hidden" name="type" value={type} />
       </div>
 
-      {/* ... REST OF THE FORM STAYS EXACTLY THE SAME ... */}
-      {/* (Keep the Name, Description, and Dynamic Sections exactly as they were) */}
-      
-      {/* CORE FIELDS (Shared by all) */}
+      {/* CORE FIELDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-slate-700">Name</label>
@@ -72,9 +71,17 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
           </div>
         </div>
 
+        {/* --- REPLACED TEXTAREA WITH RICH EDITOR --- */}
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-700">Description</label>
-          <textarea name="entry" rows={5} className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border py-2 px-3 font-mono text-sm" placeholder="Lore goes here..."></textarea>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+          
+          {/* Hidden input carries the HTML content to the server action */}
+          <input type="hidden" name="entry" value={entryContent} />
+          
+          <RichTextEditor 
+            content={entryContent} 
+            onChange={(html) => setEntryContent(html)} 
+          />
         </div>
       </div>
 
