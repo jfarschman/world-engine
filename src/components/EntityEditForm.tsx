@@ -3,6 +3,7 @@
 import { updateEntity } from '@/app/actions';
 import { useState } from 'react';
 import RichTextEditor from './RichTextEditor';
+import ImageUploader from './ImageUploader'; // <--- IMPORT THIS
 
 interface EntityEditFormProps {
   entity: {
@@ -10,18 +11,19 @@ interface EntityEditFormProps {
     name: string;
     type: string;
     entry: string | null;
+    image_uuid?: string | null;
+    image_ext?: string | null;
+    focal_x?: number | null;
+    focal_y?: number | null;
   };
   onCancel: () => void;
 }
 
 const processInitialContent = (content: string | null) => {
   if (!content) return '';
-
-  // Regex to find [type:id|Label] patterns
   return content.replace(
     /\[(character|location|organisation|family|race|note|post|item|entity):(\d+)\|([^\]]+)\]/gi,
     (match, type, id, label) => {
-      // UPDATED: No '@' symbol in the text content
       return `<span data-type="mention" class="bg-green-100 text-green-800 rounded px-1 py-0.5 font-medium decoration-clone" data-id="${id}" data-label="${label}">${label}</span>`;
     }
   );
@@ -29,8 +31,6 @@ const processInitialContent = (content: string | null) => {
 
 export default function EntityEditForm({ entity, onCancel }: EntityEditFormProps) {
   const [isSaving, setIsSaving] = useState(false);
-  
-  // Hydrate the editor with processed content (Shortcodes -> Mentions)
   const [entryContent, setEntryContent] = useState(processInitialContent(entity.entry));
 
   const handleSubmit = async (formData: FormData) => {
@@ -43,8 +43,6 @@ export default function EntityEditForm({ entity, onCancel }: EntityEditFormProps
   return (
     <form action={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
       <input type="hidden" name="id" value={entity.id} />
-      
-      {/* Hidden input carries the HTML content */}
       <input type="hidden" name="entry" value={entryContent} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -75,14 +73,24 @@ export default function EntityEditForm({ entity, onCancel }: EntityEditFormProps
         </div>
       </div>
 
+      {/* --- ADD IMAGE UPLOADER HERE --- */}
+      <div className="col-span-full border-t border-slate-100 pt-4">
+         <ImageUploader 
+           initialImage={entity.image_uuid && entity.image_ext 
+             ? `/gallery/${entity.image_uuid}.${entity.image_ext}` 
+             : null
+           }
+           initialX={entity.focal_x || 50}
+           initialY={entity.focal_y || 50}
+         />
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">Entry</label>
-        
         <RichTextEditor 
           content={entryContent} 
           onChange={(html) => setEntryContent(html)} 
         />
-        
       </div>
 
       <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">

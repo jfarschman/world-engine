@@ -9,6 +9,10 @@ interface EntityPreview {
   type: string;
   image_uuid: string | null;
   image_ext: string | null;
+  // --- ADDED FOCAL POINTS ---
+  focal_x?: number;
+  focal_y?: number;
+  // --------------------------
   entry: string;
 }
 
@@ -17,7 +21,6 @@ export default function EntityLink({ id, name, children }: { id: number, name: s
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // We now store exact coordinates
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const linkRef = useRef<HTMLSpanElement>(null);
 
@@ -25,20 +28,17 @@ export default function EntityLink({ id, name, children }: { id: number, name: s
     if (linkRef.current) {
       const rect = linkRef.current.getBoundingClientRect();
       
-      // LOGIC: Where should the card go?
-      let top = rect.bottom + 10; // Default: 10px below the link
-      let left = rect.left + (rect.width / 2); // Default: Centered on link
+      let top = rect.bottom + 10; 
+      let left = rect.left + (rect.width / 2); 
 
-      // 1. Vertical Check (Flip to top if near bottom)
-      // If we are in the bottom 40% of the screen, show ABOVE
+      // 1. Vertical Check
       if (rect.top > window.innerHeight * 0.6) {
-        top = rect.top - 10; // This will need CSS 'bottom-0' logic or just calculated height offset
+        top = rect.top - 10; 
       }
 
-      // 2. Horizontal Check (The "Left Menu" Fix)
-      // If the link is very close to the left edge (sidebar area), nudge the card right
+      // 2. Horizontal Check
       if (left < 250) {
-        left = 250; // Force it to start at least 250px from left
+        left = 250; 
       }
 
       setCoords({ top, left });
@@ -63,15 +63,10 @@ export default function EntityLink({ id, name, children }: { id: number, name: s
     }
   };
 
-  // Helper to determine if we are showing above or below based on the coords we set
-  // (Simplified: We just use the calculated top for 'below' logic, 
-  // but for 'above' logic we'd need to subtract height. 
-  // Let's stick to "Always Below" unless it hits the bottom edge, using standard CSS classes.)
-
   return (
     <span 
       ref={linkRef}
-      className="inline-block" // Removed 'relative' so it doesn't trap the child
+      className="inline-block" 
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsOpen(false)}
     >
@@ -87,17 +82,12 @@ export default function EntityLink({ id, name, children }: { id: number, name: s
           style={{ 
             top: coords.top, 
             left: coords.left,
-            // If we calculated it should be above, we'd adjust transform.
-            // For now, let's let CSS handle the "Above" logic via classes if possible,
-            // or just use a smart transform.
           }}
           className={`
             fixed z-[9999] w-96 bg-white rounded-xl shadow-2xl ring-1 ring-slate-900/10 
             overflow-hidden pointer-events-none transition-all animate-in fade-in zoom-in-95 duration-200 block text-left
             -translate-x-1/2 
-            ${/* If we are near bottom, translate Y up by 100% */ 
-              coords.top > window.innerHeight * 0.6 ? '-translate-y-full -mt-6' : ''
-            }
+            ${coords.top > window.innerHeight * 0.6 ? '-translate-y-full -mt-6' : ''}
           `}
         >
           
@@ -114,6 +104,10 @@ export default function EntityLink({ id, name, children }: { id: number, name: s
                     src={`/gallery/${data.image_uuid}.${data.image_ext}`}
                     alt={data.name}
                     className="absolute inset-0 h-full w-full object-cover"
+                    // --- FOCAL POINT APPLIED HERE ---
+                    style={{
+                      objectPosition: `${data.focal_x || 50}% ${data.focal_y || 50}%`
+                    }}
                   />
                 ) : (
                   <span className="flex h-full items-center justify-center bg-slate-100 text-slate-300">

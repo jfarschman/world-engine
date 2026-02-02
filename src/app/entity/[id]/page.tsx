@@ -216,18 +216,24 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           {/* RIGHT COLUMN: Sidebar */}
           <div className="space-y-6">
             <div className="bg-white p-2 rounded-xl shadow-lg border border-slate-100 overflow-hidden">
-                {entity.image_uuid && entity.image_ext ? (
-                  <img 
-                    src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
-                    alt={entity.name}
-                    className="w-full h-auto rounded-lg object-cover"
-                  />
-                ) : (
-                   <div className="w-full aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
-                      <span className="text-6xl font-bold">{entity.name.charAt(0)}</span>
-                   </div>
-                )}
-            </div>
+              {entity.image_uuid && entity.image_ext ? (
+                <img 
+                src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
+                alt={entity.name}
+                // 1. Set a fixed aspect ratio (optional but recommended for consistency) or keep h-auto
+                // 2. Add object-cover so it crops
+                className="w-full aspect-square rounded-lg object-cover bg-slate-100"
+                // 3. APPLY THE FOCAL POINT CSS HERE
+                style={{
+                  objectPosition: `${entity.focal_x || 50}% ${entity.focal_y || 50}%`
+                }}
+              />
+            ) : (
+              <div className="w-full aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
+                 <span className="text-6xl font-bold">{entity.name.charAt(0)}</span>
+              </div>
+            )}
+          </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-semibold text-slate-700">

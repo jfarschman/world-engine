@@ -2,13 +2,13 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { UserGroupIcon, MapIcon, SparklesIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
-// NEW IMPORT:
 import RichTextRenderer from '@/components/RichTextRenderer';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
   // 1. Fetch Featured Entities
+  // Note: Since we use 'include', focal_x/y are fetched automatically.
   const featuredEntities = await prisma.entity.findMany({
     where: { is_featured: true },
     orderBy: { name: 'asc' },
@@ -60,6 +60,10 @@ export default async function Dashboard() {
                       src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
                       className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                       alt={entity.name}
+                      // --- FOCAL POINT APPLIED HERE ---
+                      style={{
+                        objectPosition: `${entity.focal_x || 50}% ${entity.focal_y || 50}%`
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-100 via-slate-400 to-slate-900"></div>
@@ -79,7 +83,6 @@ export default async function Dashboard() {
                 {/* CONTENT PREVIEW */}
                 <div className="relative p-4 flex-1">
                   <div className="h-40 overflow-hidden prose prose-sm prose-slate max-w-none text-slate-600">
-                    {/* HERE IS THE FIX: */}
                     <RichTextRenderer content={entity.entry} />
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>

@@ -20,6 +20,10 @@ export async function GET(
         type: true,
         image_uuid: true,
         image_ext: true,
+        // --- ADDED FOCAL POINTS HERE ---
+        focal_x: true,
+        focal_y: true,
+        // -------------------------------
         entry: true,
       },
     });
@@ -29,12 +33,10 @@ export async function GET(
     // 1. Resolve Mentions (turn [Link] into Link)
     let cleanText = stripKankaMentions(entity.entry || '');
     
-    // 2. Strip HTML Tags (The new fix)
-    // This regex removes anything that looks like <tag>
+    // 2. Strip HTML Tags
     cleanText = cleanText.replace(/<[^>]*>?/gm, '');
     
-    // 3. Decode HTML Entities (optional but good: turns &amp; back into &)
-    // A simple way to handle common ones without a library:
+    // 3. Decode HTML Entities
     cleanText = cleanText
       .replace(/&nbsp;/g, ' ')
       .replace(/&amp;/g, '&')

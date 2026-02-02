@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { createEntity } from '@/app/actions';
 import { useSearchParams } from 'next/navigation';
-// NEW IMPORT:
 import RichTextEditor from '@/components/RichTextEditor';
+import ImageUploader from '@/components/ImageUploader'; // <--- IMPORT THIS
 
 interface SimpleEntity { id: number; name: string; }
 
@@ -18,8 +18,6 @@ interface FormProps {
 export default function EntityForm({ locations, races, families, orgs }: FormProps) {
   const searchParams = useSearchParams();
   const [type, setType] = useState(searchParams.get('type') || 'Character');
-
-  // NEW STATE: Track the editor content
   const [entryContent, setEntryContent] = useState('');
 
   useEffect(() => {
@@ -29,7 +27,7 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
 
   return (
     <form action={createEntity} className="space-y-8">
-        
+      
       {/* TYPE SELECTOR */}
       <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
         <label className="block text-sm font-medium text-slate-700 mb-2">Entity Type</label>
@@ -60,24 +58,15 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
           <input name="name" type="text" required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border py-2 px-3" placeholder="Entity Name" />
         </div>
         
-        {/* Image Filename */}
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-700">Image Filename</label>
-          <div className="flex">
-            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500 text-sm">
-              /gallery/
-            </span>
-            <input name="image_filename" type="text" className="flex-1 block w-full rounded-none rounded-r-md border-slate-300 focus:border-blue-500 focus:ring-blue-500 border py-2 px-3" placeholder="filename.jpg" />
-          </div>
+        {/* --- IMAGE UPLOADER REPLACES TEXT INPUT --- */}
+        <div className="md:col-span-2 border-t border-slate-100 pt-4">
+           <ImageUploader />
         </div>
+        {/* ------------------------------------------ */}
 
-        {/* --- REPLACED TEXTAREA WITH RICH EDITOR --- */}
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-          
-          {/* Hidden input carries the HTML content to the server action */}
           <input type="hidden" name="entry" value={entryContent} />
-          
           <RichTextEditor 
             content={entryContent} 
             onChange={(html) => setEntryContent(html)} 
@@ -91,7 +80,7 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
           {type} Specifics
         </h3>
 
-        {/* CHARACTER FIELDS */}
+        {/* CHARACTER */}
         {type === 'Character' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -102,7 +91,6 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
               <label className="block text-sm font-medium text-slate-700">Age</label>
               <input name="age" type="text" className="mt-1 block w-full border rounded-md py-2 px-3 border-slate-300" />
             </div>
-            
             <div>
               <label className="block text-sm font-medium text-slate-700">Race / Ancestry</label>
               <select name="race_id" className="mt-1 block w-full border rounded-md py-2 px-3 border-slate-300 bg-white">
@@ -120,7 +108,7 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
           </div>
         )}
 
-        {/* LOCATION FIELDS */}
+        {/* LOCATION */}
         {type === 'Location' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div>
@@ -137,7 +125,7 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
           </div>
         )}
 
-        {/* ORGANISATION FIELDS */}
+        {/* ORGANISATION */}
         {type === 'Organisation' && (
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div>
@@ -154,7 +142,7 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
            </div>
         )}
 
-        {/* NOTE FIELDS */}
+        {/* NOTE */}
         {type === 'Note' && (
             <div>
               <label className="block text-sm font-medium text-slate-700">Category</label>
@@ -166,7 +154,6 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
               </select>
             </div>
         )}
-
       </div>
 
       <button type="submit" className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">
