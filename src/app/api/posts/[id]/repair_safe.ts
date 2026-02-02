@@ -31,7 +31,7 @@ async function repairModel(modelName: 'entity' | 'post') {
 
     let isDirty = false;
     
-    const newEntry = r.entry.replace(SAFE_TAG_REGEX, (match, type, idStr, existingLabel) => {
+      const newEntry = r.entry.replace(SAFE_TAG_REGEX, (match: string, type: string, idStr: string, existingLabel: string | undefined) => {
       const id = parseInt(idStr);
       
       // OPTION 1: You provided a label (e.g., "Kustos", "Dee")
