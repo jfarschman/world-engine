@@ -1,11 +1,5 @@
 import EntityList from '@/components/EntityList';
 
-export default function NotesPage() {
-  return <EntityList type="Note" title="Notes" />;
-}
-
-import EntityList from '@/components/EntityList';
-
 interface PageProps {
   searchParams: Promise<{ page?: string }>;
 }
