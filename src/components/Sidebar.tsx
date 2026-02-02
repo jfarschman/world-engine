@@ -23,9 +23,9 @@ const navItems = [
   { name: 'Locations', href: '/locations', icon: MapIcon, type: 'Location' },
   { name: 'Organisations', href: '/organisations', icon: BuildingLibraryIcon, type: 'Organisation' },
   { name: 'Families', href: '/families', icon: UsersIcon, type: 'Family' },
-  { name: 'Races', href: '/races', icon: SparklesIcon, type: 'Race' },
+  // UPDATED: Label is "Ancestries", Link is "/ancestries", but DB type remains "Race"
+  { name: 'Ancestries', href: '/ancestries', icon: SparklesIcon, type: 'Race' },
   { name: 'Notes', href: '/notes', icon: DocumentTextIcon, type: 'Note' },
-  // NEW ITEM HERE:
   { name: 'Journals', href: '/journals', icon: BookOpenIcon }, 
 ];
 
@@ -34,6 +34,7 @@ export default async function Sidebar() {
   const isLoggedIn = cookieStore.has('lore_session');
 
   // Fetch recent journals for the bottom section
+  // PERFORMANCE: take: 5 is good for t3.small
   const recentPosts = await prisma.post.findMany({
     take: 5,
     orderBy: { id: 'desc' },
@@ -65,7 +66,7 @@ export default async function Sidebar() {
               {item.name}
             </Link>
             
-            {/* Contextual Create Button (Only if type is defined) */}
+            {/* Contextual Create Button */}
             {isLoggedIn && item.type && (
                <Link
                  href={`/entity/create?type=${item.type}`}
@@ -78,7 +79,7 @@ export default async function Sidebar() {
           </div>
         ))}
 
-        {/* RECENT JOURNALS SECTION (kept as requested!) */}
+        {/* RECENT ACTIVITY */}
         {recentPosts.length > 0 && (
           <div className="pt-6 pb-2">
             <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
