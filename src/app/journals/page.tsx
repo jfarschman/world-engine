@@ -1,6 +1,12 @@
 import EntityList from '@/components/EntityList';
 
-export default function JournalsPage() {
-  // If your journals are type 'Session', change "Journal" to "Session" below
-  return <EntityList type="Journal" title="Journals" />;
+interface PageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function JournalsPage(props: PageProps) {
+  const searchParams = await props.searchParams;
+  const page = parseInt(searchParams.page || '1');
+  
+  return <EntityList type="Journal" title="Journals" page={page} />;
 }

@@ -1,5 +1,12 @@
 import EntityList from '@/components/EntityList';
 
-export default function CharactersPage() {
-  return <EntityList type="Character" title="Characters" />;
+interface PageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function CharactersPage(props: PageProps) {
+  const searchParams = await props.searchParams;
+  const page = parseInt(searchParams.page || '1');
+  
+  return <EntityList type="Character" title="Characters" page={page} />;
 }
