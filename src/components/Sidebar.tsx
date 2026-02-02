@@ -41,8 +41,8 @@ export default async function Sidebar() {
   });
 
   return (
-    <div className="flex h-full w-64 flex-col bg-slate-900 text-white shadow-xl fixed left-0 top-0 bottom-0 overflow-y-auto z-50">
-      
+    <div className="flex h-full w-full flex-col bg-slate-900 text-white overflow-y-auto">
+
       {/* Brand */}
       <div className="flex h-16 items-center justify-center border-b border-slate-800 bg-slate-950 px-4 shrink-0">
         <h1 className="text-xl font-bold tracking-widest text-blue-400">LORE<span className="text-white">DB</span></h1>
