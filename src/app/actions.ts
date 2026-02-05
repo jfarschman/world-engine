@@ -12,7 +12,6 @@ import { randomUUID } from 'crypto';
 async function saveImage(formData: FormData): Promise<{ uuid: string | null; ext: string | null }> {
   const imageFile = formData.get('image_file') as File;
 
-  // If no file uploaded, return nulls
   if (!imageFile || imageFile.size === 0 || imageFile.name === 'undefined') {
     return { uuid: null, ext: null };
   }
@@ -22,7 +21,6 @@ async function saveImage(formData: FormData): Promise<{ uuid: string | null; ext
     const uuid = randomUUID();
     const ext = imageFile.name.split('.').pop() || 'jpg';
     
-    // Save to public/gallery
     const uploadDir = path.join(process.cwd(), 'public', 'gallery');
     await mkdir(uploadDir, { recursive: true });
 
@@ -44,7 +42,6 @@ export async function createEntity(formData: FormData) {
   const type = formData.get('type') as string;
   const entry = formData.get('entry') as string;
   
-  // Parse Focal Points
   const focal_x = parseInt(formData.get('focal_x') as string) || 50;
   const focal_y = parseInt(formData.get('focal_y') as string) || 50;
   
@@ -54,43 +51,68 @@ export async function createEntity(formData: FormData) {
   };
 
   const parentId = parseId('location_id') || parseId('parent_location_id');
-
-  // Handle Image Upload (Replaces your old text-based logic)
   const { uuid: image_uuid, ext: image_ext } = await saveImage(formData);
 
   const entityData: any = {
     name,
     type,
     entry,
-    parentId,
+    parentId, 
     focal_x,
     focal_y,
-    // Only add image fields if a file was uploaded
     ...(image_uuid && { image_uuid, image_ext }),
   };
 
-  // Sub-Table Logic (Preserved from your version)
+  // --- SUB-TABLE LOGIC ---
   if (type === 'Character') {
+    const raceId = parseId('race_id');
+    const familyId = parseId('family_id');
+    const orgId = parseId('organisation_id');
+
     entityData.character = {
       create: {
         title: formData.get('title') as string,
         age: formData.get('age') as string,
-        raceId: parseId('race_id'), 
+        is_dead: formData.get('is_dead') === 'on',
+        
+        // FIX: Connect using 'entityId' instead of 'id'
+        race: raceId ? { connect: { entityId: raceId } } : undefined,
+        
+        families: familyId 
+          ? { create: { family: { connect: { entityId: familyId } } } } 
+          : undefined,
+          
+        organisations: orgId 
+          ? { create: { organisation: { connect: { entityId: orgId } } } } 
+          : undefined,
       },
     };
   }
+
   if (type === 'Location') {
-    entityData.location = { create: { is_destroyed: formData.get('is_destroyed') === 'on' } };
+    entityData.location = {
+      create: {
+        is_destroyed: formData.get('is_destroyed') === 'on',
+      },
+    };
   }
+
   if (type === 'Organisation') {
-    entityData.organisation = { create: { is_defunct: formData.get('is_defunct') === 'on' } };
+    entityData.organisation = {
+      create: {
+        is_defunct: formData.get('is_defunct') === 'on',
+      },
+    };
   }
+
   if (type === 'Family') {
     entityData.family = { create: { is_extinct: formData.get('is_extinct') === 'on' } };
   }
+
   if (type === 'Race') {
     entityData.race = { create: { is_extinct: formData.get('is_extinct') === 'on' } };
   }
+
   if (type === 'Note') {
     entityData.note = { create: { type: formData.get('note_type') as string } };
   }
@@ -111,13 +133,18 @@ export async function updateEntity(formData: FormData) {
 
   const focal_x = parseInt(formData.get('focal_x') as string);
   const focal_y = parseInt(formData.get('focal_y') as string);
+  const is_featured = formData.get('is_featured') === 'on';
 
   if (!id || !name) throw new Error('Missing required fields');
 
-  // Handle New Image Upload
   const { uuid: new_uuid, ext: new_ext } = await saveImage(formData);
 
-  const updateData: any = { name, type, entry };
+  const updateData: any = {
+    name,
+    type,
+    entry,
+    is_featured,
+  };
 
   if (!isNaN(focal_x)) updateData.focal_x = focal_x;
   if (!isNaN(focal_y)) updateData.focal_y = focal_y;
@@ -125,6 +152,89 @@ export async function updateEntity(formData: FormData) {
   if (new_uuid) {
     updateData.image_uuid = new_uuid;
     updateData.image_ext = new_ext;
+  }
+
+  const parseId = (key: string) => {
+    const val = formData.get(key);
+    return val ? parseInt(val as string) : null; 
+  };
+
+  // --- SUB-TABLE UPDATE LOGIC ---
+  if (type === 'Character') {
+    const raceId = parseId('race_id');
+    const familyId = parseId('family_id');
+    const orgId = parseId('organisation_id');
+
+    updateData.character = {
+      upsert: {
+        create: {
+          title: formData.get('title') as string,
+          age: formData.get('age') as string,
+          is_dead: formData.get('is_dead') === 'on',
+          race: raceId ? { connect: { entityId: raceId } } : undefined,
+          families: familyId ? { create: { family: { connect: { entityId: familyId } } } } : undefined,
+          organisations: orgId ? { create: { organisation: { connect: { entityId: orgId } } } } : undefined,
+        },
+        update: {
+          title: formData.get('title') as string,
+          age: formData.get('age') as string,
+          is_dead: formData.get('is_dead') === 'on',
+          
+          // FIX: Relations Update using entityId
+          race: raceId ? { connect: { entityId: raceId } } : { disconnect: true },
+          
+          families: familyId 
+             ? { deleteMany: {}, create: { family: { connect: { entityId: familyId } } } } 
+             : { deleteMany: {} },
+             
+          organisations: orgId 
+             ? { deleteMany: {}, create: { organisation: { connect: { entityId: orgId } } } } 
+             : { deleteMany: {} }
+        }
+      }
+    };
+  }
+
+  if (type === 'Location') {
+    const parentId = parseId('parent_location_id');
+    updateData.location = {
+      upsert: {
+        create: { is_destroyed: formData.get('is_destroyed') === 'on' },
+        update: { is_destroyed: formData.get('is_destroyed') === 'on' }
+      }
+    };
+    if (parentId) updateData.parentId = parentId;
+  }
+
+  if (type === 'Organisation') {
+    updateData.organisation = {
+      upsert: {
+        create: { 
+           is_defunct: formData.get('is_defunct') === 'on',
+        },
+        update: { 
+           is_defunct: formData.get('is_defunct') === 'on',
+        }
+      }
+    };
+  }
+
+  if (type === 'Family') {
+    updateData.family = {
+      upsert: {
+        create: { is_extinct: formData.get('is_extinct') === 'on' },
+        update: { is_extinct: formData.get('is_extinct') === 'on' }
+      }
+    };
+  }
+
+  if (type === 'Race') {
+    updateData.race = {
+      upsert: {
+        create: { is_extinct: formData.get('is_extinct') === 'on' },
+        update: { is_extinct: formData.get('is_extinct') === 'on' }
+      }
+    };
   }
 
   await prisma.entity.update({
@@ -135,7 +245,7 @@ export async function updateEntity(formData: FormData) {
   revalidatePath(`/entity/${id}`);
 }
 
-// --- DELETE / POST / LOGIN ACTIONS (Standard) ---
+// --- STANDARD ACTIONS ---
 export async function deleteEntity(id: number) {
   const cookieStore = await cookies();
   if (!cookieStore.has('lore_session')) throw new Error('Unauthorized');

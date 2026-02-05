@@ -2,9 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import JournalSession from '@/components/JournalSession';
-import { resolveKankaMentions } from '@/lib/utils';
-import parse, { domToReact } from 'html-react-parser';
-import EntityLink from '@/components/EntityLink';
+import RichTextRenderer from '@/components/RichTextRenderer';
 import NewPostForm from '@/components/NewPostForm';
 import DeleteButton from '@/components/DeleteButton';
 import { deleteEntity, deletePost } from '@/app/actions';
@@ -30,12 +28,25 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
 
+  // 2. FETCH ENTITY WITH ALL RELATIONS
   const entity = await prisma.entity.findUnique({
     where: { id },
     include: {
-      character: true,
-      location: true,
-      organisation: true,
+      parent: true, // Attempts to fetch parent from the main Entity table
+      character: { 
+        include: { 
+          race: true, 
+          families: true, 
+          organisations: true 
+        } 
+      },
+      location: true, 
+      organisation: { 
+        // FIXED: Removed 'include: { location: true }' because the relation does not exist in schema
+        include: { 
+          members: true // 'members' is a valid relation per the error message
+        } 
+      },
       family: true,
       race: true,
       note: true,
@@ -47,88 +58,76 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
 
   if (!entity) return notFound();
 
-  // 2. PARSER LOGIC
-  const parseContent = (htmlString: string) => {
-    return parse(htmlString, {
-      replace: (domNode) => {
-        if (domNode.type === 'tag' && domNode.name === 'a') {
-          const href = domNode.attribs.href;
-          const title = domNode.attribs.title;
-          
-          let entityId = null;
+  // 3. FETCH LISTS FOR EDIT DROPDOWNS
+  const [locations, races, families, orgs] = await Promise.all([
+    prisma.entity.findMany({ where: { type: 'Location' }, select: { id: true, name: true } }),
+    prisma.entity.findMany({ where: { type: 'Race' }, select: { id: true, name: true } }),
+    prisma.entity.findMany({ where: { type: 'Family' }, select: { id: true, name: true } }),
+    prisma.entity.findMany({ where: { type: 'Organisation' }, select: { id: true, name: true } }),
+  ]);
 
-          if (title) {
-            const titleMatch = title.match(/[:#](\d+)/); 
-            if (titleMatch) entityId = parseInt(titleMatch[1]);
-          }
-
-          if (!entityId && href) {
-             const hrefMatch = href.match(/entity\/(\d+)/); 
-             if (hrefMatch) entityId = parseInt(hrefMatch[1]);
-          }
-
-          if (entityId) {
-            return (
-              <EntityLink id={entityId} name={title || 'Entity'}>
-                {/* @ts-ignore */}
-                {domToReact(domNode.children)}
-              </EntityLink>
-            );
-          }
-        }
-        
-        // Handle Tiptap Mentions in Read-Only Mode
-        if (
-          domNode.type === 'tag' && 
-          domNode.name === 'span' && 
-          domNode.attribs['data-type'] === 'mention'
-        ) {
-          const id = parseInt(domNode.attribs['data-id']);
-          const label = domNode.attribs['data-label'];
-
-          if (id) {
-            return (
-              <EntityLink id={id} name={label || 'Entity'}>
-                {label}
-              </EntityLink>
-            );
-          }
-        }
-      }
-    });
+  // 4. HELPER: SAFELY EXTRACT NAMES
+  const getRelationName = (relation: any) => {
+    if (!relation) return null;
+    if (Array.isArray(relation)) {
+      return relation.map((r: any) => r.name).join(', ');
+    }
+    return relation.name;
   };
-
-  const contentHtml = entity.entry ? resolveKankaMentions(entity.entry) : '';
 
   const renderAttributes = () => {
     switch (entity.type) {
       case 'Character':
         return (
           <>
-            <Attribute label="Title" value={entity.character?.title} />
+            <Attribute label="Title/Class" value={entity.character?.title} />
             <Attribute label="Age" value={entity.character?.age} />
-            <Attribute label="Sex" value={entity.character?.sex} />
-            <Attribute label="Status" value={entity.character?.is_dead ? "Deceased 💀" : "Alive"} />
+            <Attribute label="Race" value={entity.character?.race?.name} />
+            <Attribute label="Family" value={getRelationName(entity.character?.families)} />
+            <Attribute label="Organisation" value={getRelationName(entity.character?.organisations)} />
+            {entity.character?.is_dead && <Attribute label="Status" value="💀 Deceased" />}
           </>
         );
       case 'Location':
-        return <Attribute label="Status" value={entity.location?.is_destroyed ? "Destroyed 🏚️" : "Standing"} />;
+        return (
+          <>
+            <Attribute label="Parent Location" value={entity.parent?.name} />
+            {entity.location?.is_destroyed && <Attribute label="Status" value="🔥 Destroyed" />}
+          </>
+        );
       case 'Organisation':
-        return <Attribute label="Status" value={entity.organisation?.is_defunct ? "Defunct" : "Active"} />;
+        return (
+          <>
+            {/* Note: HQ Location requires the missing relation, so it will be blank for now */}
+            {/* <Attribute label="HQ Location" value={entity.organisation?.location?.name} /> */}
+            {entity.organisation?.is_defunct && <Attribute label="Status" value="❌ Defunct" />}
+          </>
+        );
       case 'Family':
-        return <Attribute label="Status" value={entity.family?.is_extinct ? "Extinct" : "Extant"} />;
+        return (
+          <>
+            {entity.family?.is_extinct && <Attribute label="Status" value="⚰️ Extinct" />}
+          </>
+        );
       case 'Race':
-        return <Attribute label="Status" value={entity.race?.is_extinct ? "Extinct" : "Living"} />;
+        return (
+           <>
+            {entity.race?.is_extinct && <Attribute label="Status" value="⚰️ Extinct" />}
+           </>
+        );
       case 'Note':
-        return <Attribute label="Category" value={entity.note?.type || "General Note"} />;
+        return <Attribute label="Category" value={entity.note?.type} />;
       default:
         return null;
     }
   };
 
   return (
-    <EntityEditableBlock entity={entity} isLoggedIn={isLoggedIn}>
-      
+    <EntityEditableBlock 
+      entity={entity} 
+      isLoggedIn={isLoggedIn}
+      lists={{ locations, races, families, orgs }}
+    >
       <div className="space-y-6 pt-2">
         
         {/* HEADER SECTION */}
@@ -141,23 +140,12 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
              <h1 className="text-4xl font-extrabold text-slate-900">{entity.name}</h1>
            </div>
 
-           {/* ACTION BUTTONS (Only if Logged In) */}
+           {/* ACTION BUTTONS */}
            {isLoggedIn && (
             <div className="flex items-center space-x-2">
-               {/* 1. Feature Star */}
                <FeatureButton id={entity.id} isFeatured={entity.is_featured} />
-               
-               {/* 2. NEW EDIT BUTTON */}
-               <EditButton 
-                 className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-               />
-
-               {/* 3. Delete Trash Can */}
-               <DeleteButton 
-                 id={entity.id} 
-                 action={deleteEntity} 
-                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
-               />
+               <EditButton className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all" />
+               <DeleteButton id={entity.id} action={deleteEntity} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all" />
             </div>
            )}
         </div>
@@ -170,7 +158,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
             {/* Main Entry Text */}
             {entity.entry && (
                <div className="prose prose-slate max-w-none text-slate-800 bg-white p-6 rounded-lg shadow-sm border border-slate-100">
-                 {parseContent(contentHtml)}
+                 <RichTextRenderer content={entity.entry} />
                </div>
             )}
 
@@ -188,13 +176,13 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                     <div key={post.id} className="px-4 relative group">
                       
                       {isLoggedIn && (
-                         <div className="absolute top-4 right-12 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <DeleteButton 
-                              id={post.id} 
-                              action={deletePost} 
-                              className="bg-white p-1 text-slate-400 hover:text-red-600 rounded-full shadow-sm border border-slate-200" 
-                            />
-                         </div>
+                          <div className="absolute top-4 right-12 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <DeleteButton 
+                               id={post.id} 
+                               action={deletePost} 
+                               className="bg-white p-1 text-slate-400 hover:text-red-600 rounded-full shadow-sm border border-slate-200" 
+                             />
+                          </div>
                       )}
 
                       <JournalSession 
@@ -218,22 +206,19 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
             <div className="bg-white p-2 rounded-xl shadow-lg border border-slate-100 overflow-hidden">
               {entity.image_uuid && entity.image_ext ? (
                 <img 
-                src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
-                alt={entity.name}
-                // 1. Set a fixed aspect ratio (optional but recommended for consistency) or keep h-auto
-                // 2. Add object-cover so it crops
-                className="w-full aspect-square rounded-lg object-cover bg-slate-100"
-                // 3. APPLY THE FOCAL POINT CSS HERE
-                style={{
-                  objectPosition: `${entity.focal_x || 50}% ${entity.focal_y || 50}%`
-                }}
-              />
-            ) : (
-              <div className="w-full aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
-                 <span className="text-6xl font-bold">{entity.name.charAt(0)}</span>
-              </div>
-            )}
-          </div>
+                  src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
+                  alt={entity.name}
+                  className="w-full aspect-square rounded-lg object-cover bg-slate-100"
+                  style={{
+                    objectPosition: `${entity.focal_x || 50}% ${entity.focal_y || 50}%`
+                  }}
+                />
+              ) : (
+                 <div className="w-full aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
+                    <span className="text-6xl font-bold">{entity.name.charAt(0)}</span>
+                 </div>
+              )}
+            </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-semibold text-slate-700">
