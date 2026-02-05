@@ -35,22 +35,35 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       parent: true,
       character: { 
         include: { 
-          race: true, 
-          // FIXED: Deeply include the relations inside the join tables
+          // FIX: Include the 'entity' relation so we can get the Name
+          race: {
+            include: { entity: true }
+          }, 
           families: {
-            include: { family: true }
+            include: { 
+              family: {
+                include: { entity: true } // FIX: Deep include
+              } 
+            }
           },
           organisations: {
-            include: { organisation: true }
+            include: { 
+              organisation: {
+                include: { entity: true } // FIX: Deep include
+              } 
+            }
           }
         } 
       },
       location: true, 
       organisation: { 
         include: { 
-          // FIXED: Fetch members for the Organisation view
           members: {
-            include: { character: true }
+            include: { 
+              character: {
+                include: { entity: true } // FIX: Deep include
+              } 
+            }
           }
         } 
       },
@@ -74,11 +87,11 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
   ]);
 
   // 4. HELPER: EXTRACT NAMES FROM JOIN TABLES
-  // This helper digs into the array of join records to find the actual names
+  // FIX: Updated to look for item[key].entity.name instead of item[key].name
   const getJoinedNames = (list: any[], key: string) => {
     if (!list || !Array.isArray(list)) return null;
     return list
-      .map((item) => item[key]?.name) // e.g. item.family.name
+      .map((item) => item[key]?.entity?.name) // <--- CHANGED THIS
       .filter(Boolean)
       .join(', ');
   };
@@ -90,7 +103,8 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           <>
             <Attribute label="Title/Class" value={entity.character?.title} />
             <Attribute label="Age" value={entity.character?.age} />
-            <Attribute label="Race" value={entity.character?.race?.name} />
+            {/* FIX: Access .entity.name */}
+            <Attribute label="Race" value={entity.character?.race?.entity?.name} />
             <Attribute label="Family" value={getJoinedNames(entity.character?.families || [], 'family')} />
             <Attribute label="Organisation" value={getJoinedNames(entity.character?.organisations || [], 'organisation')} />
             {entity.character?.is_dead && <Attribute label="Status" value="💀 Deceased" />}
