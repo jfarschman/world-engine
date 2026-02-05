@@ -109,14 +109,24 @@ export default function EntityEditForm({ entity, lists, onCancel }: EntityEditFo
              </div>
              <div>
                <label className="block text-sm font-medium text-slate-700">Family</label>
-               <select name="family_id" defaultValue={entity.character?.familyId || ""} className="w-full px-3 py-2 border rounded-md bg-white">
+               <select 
+                 name="family_id" 
+                 // FIX: Access familyId via the families array (many-to-many)
+                 defaultValue={entity.character?.families?.[0]?.familyId || ""} 
+                 className="w-full px-3 py-2 border rounded-md bg-white"
+               >
                  <option value="">-- None --</option>
                  {lists?.families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                </select>
              </div>
              <div>
                <label className="block text-sm font-medium text-slate-700">Organisation</label>
-               <select name="organisation_id" defaultValue={entity.character?.organisationId || ""} className="w-full px-3 py-2 border rounded-md bg-white">
+               <select 
+                 name="organisation_id" 
+                 // FIX: Access organisationId via the organisations array (many-to-many)
+                 defaultValue={entity.character?.organisations?.[0]?.organisationId || ""} 
+                 className="w-full px-3 py-2 border rounded-md bg-white"
+               >
                  <option value="">-- None --</option>
                  {lists?.orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                </select>

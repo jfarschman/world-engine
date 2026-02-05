@@ -32,19 +32,26 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
   const entity = await prisma.entity.findUnique({
     where: { id },
     include: {
-      parent: true, // Attempts to fetch parent from the main Entity table
+      parent: true,
       character: { 
         include: { 
           race: true, 
-          families: true, 
-          organisations: true 
+          // FIXED: Deeply include the relations inside the join tables
+          families: {
+            include: { family: true }
+          },
+          organisations: {
+            include: { organisation: true }
+          }
         } 
       },
       location: true, 
       organisation: { 
-        // FIXED: Removed 'include: { location: true }' because the relation does not exist in schema
         include: { 
-          members: true // 'members' is a valid relation per the error message
+          // FIXED: Fetch members for the Organisation view
+          members: {
+            include: { character: true }
+          }
         } 
       },
       family: true,
@@ -66,13 +73,14 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
     prisma.entity.findMany({ where: { type: 'Organisation' }, select: { id: true, name: true } }),
   ]);
 
-  // 4. HELPER: SAFELY EXTRACT NAMES
-  const getRelationName = (relation: any) => {
-    if (!relation) return null;
-    if (Array.isArray(relation)) {
-      return relation.map((r: any) => r.name).join(', ');
-    }
-    return relation.name;
+  // 4. HELPER: EXTRACT NAMES FROM JOIN TABLES
+  // This helper digs into the array of join records to find the actual names
+  const getJoinedNames = (list: any[], key: string) => {
+    if (!list || !Array.isArray(list)) return null;
+    return list
+      .map((item) => item[key]?.name) // e.g. item.family.name
+      .filter(Boolean)
+      .join(', ');
   };
 
   const renderAttributes = () => {
@@ -83,8 +91,8 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
             <Attribute label="Title/Class" value={entity.character?.title} />
             <Attribute label="Age" value={entity.character?.age} />
             <Attribute label="Race" value={entity.character?.race?.name} />
-            <Attribute label="Family" value={getRelationName(entity.character?.families)} />
-            <Attribute label="Organisation" value={getRelationName(entity.character?.organisations)} />
+            <Attribute label="Family" value={getJoinedNames(entity.character?.families || [], 'family')} />
+            <Attribute label="Organisation" value={getJoinedNames(entity.character?.organisations || [], 'organisation')} />
             {entity.character?.is_dead && <Attribute label="Status" value="💀 Deceased" />}
           </>
         );
@@ -98,8 +106,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       case 'Organisation':
         return (
           <>
-            {/* Note: HQ Location requires the missing relation, so it will be blank for now */}
-            {/* <Attribute label="HQ Location" value={entity.organisation?.location?.name} /> */}
+            <Attribute label="Members" value={entity.organisation?.members?.length || 0} />
             {entity.organisation?.is_defunct && <Attribute label="Status" value="❌ Defunct" />}
           </>
         );
