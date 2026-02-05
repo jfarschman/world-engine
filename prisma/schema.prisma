@@ -104,6 +104,7 @@ model Post {
   name      String
   entry     String?  @db.Text
   position  Int      @default(0)
+  createdAt DateTime @default(now())
   entityId  Int
   entity    Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
 }
@@ -116,7 +117,6 @@ model Relationship {
   attitude  Int?     // Kanka exports this sometimes (range -100 to 100)
   source    Entity   @relation("RelSource", fields: [sourceId], references: [id])
   target    Entity   @relation("RelTarget", fields: [targetId], references: [id])
-
   @@index([sourceId])
   @@index([targetId])
 }
