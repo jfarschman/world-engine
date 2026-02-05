@@ -58,7 +58,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       race: true,
       note: true,
       posts: {
-        orderBy: { position: 'asc' }
+        orderBy: { createdAt: 'asc' },
       }
     }
   });

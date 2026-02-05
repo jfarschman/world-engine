@@ -1,17 +1,24 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { createPost } from '@/app/actions';
 import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import RichTextEditor from './RichTextEditor';
 
 export default function NewPostForm({ entityId }: { entityId: number }) {
   const [isOpen, setIsOpen] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [editorContent, setEditorContent] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (formData: FormData) => {
+    setIsSubmitting(true);
+    // The rich text HTML is passed via the hidden input named 'entry' below
     await createPost(formData);
+    
+    // Reset form
     setIsOpen(false);
-    formRef.current?.reset();
+    setEditorContent('');
+    setIsSubmitting(false);
   };
 
   if (!isOpen) {
@@ -35,8 +42,11 @@ export default function NewPostForm({ entityId }: { entityId: number }) {
         </button>
       </div>
 
-      <form ref={formRef} action={handleSubmit} className="space-y-4">
+      <form action={handleSubmit} className="space-y-4">
         <input type="hidden" name="entity_id" value={entityId} />
+        
+        {/* Hidden Input to carry the Editor HTML to the server */}
+        <input type="hidden" name="entry" value={editorContent} />
         
         {/* Title Row */}
         <div className="flex gap-4">
@@ -49,27 +59,15 @@ export default function NewPostForm({ entityId }: { entityId: number }) {
               className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 text-sm" 
             />
           </div>
-          <div className="flex items-center bg-white px-3 border border-slate-300 rounded-md">
-            <input 
-              name="is_private" 
-              id="is_private"
-              type="checkbox" 
-              className="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300 rounded" 
-            />
-            <label htmlFor="is_private" className="ml-2 block text-xs font-bold text-slate-600">
-              PRIVATE
-            </label>
-          </div>
+          {/* Optional: Add back Private checkbox if needed, kept simple for now */}
         </div>
 
-        {/* Content */}
+        {/* Rich Content Editor */}
         <div>
-          <textarea 
-            name="entry" 
-            rows={4}
-            className="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 text-sm font-mono"
-            placeholder="Write your entry here... (Supports HTML)"
-          ></textarea>
+          <RichTextEditor 
+            content={editorContent} 
+            onChange={(html) => setEditorContent(html)} 
+          />
         </div>
 
         {/* Actions */}
@@ -77,15 +75,17 @@ export default function NewPostForm({ entityId }: { entityId: number }) {
           <button 
             type="button" 
             onClick={() => setIsOpen(false)}
+            disabled={isSubmitting}
             className="px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md"
           >
             Cancel
           </button>
           <button 
             type="submit"
-            className="px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm"
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm disabled:opacity-50"
           >
-            Save Post
+            {isSubmitting ? 'Saving...' : 'Save Post'}
           </button>
         </div>
       </form>

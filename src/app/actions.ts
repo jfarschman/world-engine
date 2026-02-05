@@ -267,6 +267,23 @@ export async function createPost(formData: FormData) {
   revalidatePath(`/entity/${entityId}`);
 }
 
+export async function updatePost(formData: FormData) {
+  const cookieStore = await cookies();
+  if (!cookieStore.has('lore_session')) throw new Error('Unauthorized');
+
+  const id = parseInt(formData.get('id') as string);
+  const name = formData.get('name') as string;
+  const entry = formData.get('entry') as string;
+  const entityId = parseInt(formData.get('entity_id') as string);
+
+  await prisma.post.update({
+    where: { id },
+    data: { name, entry },
+  });
+
+  revalidatePath(`/entity/${entityId}`);
+}
+
 export async function deletePost(id: number) {
   const cookieStore = await cookies();
   if (!cookieStore.has('lore_session')) throw new Error('Unauthorized');
