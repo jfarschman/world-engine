@@ -12,9 +12,10 @@ interface JournalSessionProps {
   id: number;
   name: string;
   initialOpen?: boolean;
+  isLoggedIn: boolean; // <--- ADD THIS
 }
 
-export default function JournalSession({ id, name, initialOpen = false }: JournalSessionProps) {
+export default function JournalSession({ id, name, initialOpen = false, isLoggedIn }: JournalSessionProps) {
   // View State
   const [isOpen, setIsOpen] = useState(initialOpen);
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,9 @@ export default function JournalSession({ id, name, initialOpen = false }: Journa
           const res = await fetch(`/api/posts/${id}`);
           if (!res.ok) throw new Error(`Status: ${res.status}`);
           const data = await res.json();
-          setContent(data.entry || ''); 
+          // Use the util, but ensure we fallback to empty string if undefined
+          const safeEntry = data.entry || ''; 
+          setContent(resolveKankaMentions(safeEntry));
         } catch (error) {
           console.error("Failed to load journal entry", error);
           setContent("<p><em>Error loading entry.</em></p>");
@@ -75,7 +78,6 @@ export default function JournalSession({ id, name, initialOpen = false }: Journa
                return (
                  <EntityLink id={id} name={label || 'Entity'}>
                    <span className="bg-blue-50 text-blue-700 rounded px-1 py-0.5 font-medium">
-                     {/* No '@' symbol, just the name */}
                      {label || 'Entity'}
                    </span>
                  </EntityLink>
@@ -138,7 +140,6 @@ export default function JournalSession({ id, name, initialOpen = false }: Journa
       <div className="relative group/header">
         <button 
           onClick={toggleOpen}
-          // pr-24 ensures text doesn't run under the buttons
           className="w-full text-left py-4 flex justify-between items-center hover:bg-slate-50 transition-colors pr-24" 
         >
           <span className={`text-xl font-bold ${isOpen ? 'text-blue-800' : 'text-slate-700 group-hover/header:text-blue-600'}`}>
@@ -147,8 +148,8 @@ export default function JournalSession({ id, name, initialOpen = false }: Journa
         </button>
 
         {/* EDIT PENCIL */}
-        {/* Removed 'opacity-0' and 'group-hover' classes so it is always visible */}
-        {!isEditing && (
+        {/* CHECK IS LOGGED IN HERE */}
+        {!isEditing && isLoggedIn && ( 
           <div className="absolute top-4 right-20 z-20 transition-opacity">
             <button 
               onClick={handleEditClick}

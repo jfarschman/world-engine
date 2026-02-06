@@ -210,6 +210,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                         id={post.id} 
                         name={post.name} 
                         initialOpen={open === post.id.toString()}
+                        isLoggedIn={isLoggedIn}
                       />
                     </div>
                   ))}
