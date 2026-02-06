@@ -63,7 +63,6 @@ export async function createEntity(formData: FormData) {
     ...(image_uuid && { image_uuid, image_ext }),
   };
 
-  // --- SUB-TABLE LOGIC ---
   if (type === 'Character') {
     const raceId = parseId('race_id');
     const familyId = parseId('family_id');
@@ -74,17 +73,9 @@ export async function createEntity(formData: FormData) {
         title: formData.get('title') as string,
         age: formData.get('age') as string,
         is_dead: formData.get('is_dead') === 'on',
-        
-        // FIX: Connect using 'entityId' instead of 'id'
         race: raceId ? { connect: { entityId: raceId } } : undefined,
-        
-        families: familyId 
-          ? { create: { family: { connect: { entityId: familyId } } } } 
-          : undefined,
-          
-        organisations: orgId 
-          ? { create: { organisation: { connect: { entityId: orgId } } } } 
-          : undefined,
+        families: familyId ? { create: { family: { connect: { entityId: familyId } } } } : undefined,
+        organisations: orgId ? { create: { organisation: { connect: { entityId: orgId } } } } : undefined,
       },
     };
   }
@@ -121,6 +112,7 @@ export async function createEntity(formData: FormData) {
     data: entityData,
   });
 
+  revalidatePath('/'); // Refresh Dashboard
   redirect(`/entity/${newEntity.id}`);
 }
 
@@ -159,7 +151,6 @@ export async function updateEntity(formData: FormData) {
     return val ? parseInt(val as string) : null; 
   };
 
-  // --- SUB-TABLE UPDATE LOGIC ---
   if (type === 'Character') {
     const raceId = parseId('race_id');
     const familyId = parseId('family_id');
@@ -179,14 +170,10 @@ export async function updateEntity(formData: FormData) {
           title: formData.get('title') as string,
           age: formData.get('age') as string,
           is_dead: formData.get('is_dead') === 'on',
-          
-          // FIX: Relations Update using entityId
           race: raceId ? { connect: { entityId: raceId } } : { disconnect: true },
-          
           families: familyId 
              ? { deleteMany: {}, create: { family: { connect: { entityId: familyId } } } } 
              : { deleteMany: {} },
-             
           organisations: orgId 
              ? { deleteMany: {}, create: { organisation: { connect: { entityId: orgId } } } } 
              : { deleteMany: {} }
@@ -209,12 +196,8 @@ export async function updateEntity(formData: FormData) {
   if (type === 'Organisation') {
     updateData.organisation = {
       upsert: {
-        create: { 
-           is_defunct: formData.get('is_defunct') === 'on',
-        },
-        update: { 
-           is_defunct: formData.get('is_defunct') === 'on',
-        }
+        create: { is_defunct: formData.get('is_defunct') === 'on' },
+        update: { is_defunct: formData.get('is_defunct') === 'on' }
       }
     };
   }
@@ -242,10 +225,10 @@ export async function updateEntity(formData: FormData) {
     data: updateData,
   });
 
+  revalidatePath('/'); // Update Dashboard
   revalidatePath(`/entity/${id}`);
 }
 
-// --- STANDARD ACTIONS ---
 export async function deleteEntity(id: number) {
   const cookieStore = await cookies();
   if (!cookieStore.has('lore_session')) throw new Error('Unauthorized');
@@ -256,14 +239,19 @@ export async function deleteEntity(id: number) {
     if (error.message === 'NEXT_REDIRECT') throw error;
     console.error(error);
   }
+  revalidatePath('/');
   redirect('/');
 }
+
+// --- POST ACTIONS ---
 
 export async function createPost(formData: FormData) {
   const entityId = parseInt(formData.get('entity_id') as string);
   const name = formData.get('name') as string;
   const entry = formData.get('entry') as string;
   await prisma.post.create({ data: { name, entry, entityId, position: 0 } });
+  
+  revalidatePath('/'); // FIX: Refresh Dashboard
   revalidatePath(`/entity/${entityId}`);
 }
 
@@ -281,13 +269,20 @@ export async function updatePost(formData: FormData) {
     data: { name, entry },
   });
 
+  revalidatePath('/'); // FIX: Refresh Dashboard
   revalidatePath(`/entity/${entityId}`);
 }
 
 export async function deletePost(id: number) {
   const cookieStore = await cookies();
   if (!cookieStore.has('lore_session')) throw new Error('Unauthorized');
+  
+  const post = await prisma.post.findUnique({ where: { id } });
+  
   await prisma.post.delete({ where: { id } });
+  
+  revalidatePath('/'); // FIX: Refresh Dashboard
+  if (post) revalidatePath(`/entity/${post.entityId}`);
 }
 
 export async function login(formData: FormData) {

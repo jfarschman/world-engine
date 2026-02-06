@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
-import { UserGroupIcon, MapIcon, SparklesIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import RichTextRenderer from '@/components/RichTextRenderer';
 
@@ -8,27 +7,18 @@ export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
   // 1. Fetch Featured Entities
-  // Note: Since we use 'include', focal_x/y are fetched automatically.
   const featuredEntities = await prisma.entity.findMany({
     where: { is_featured: true },
     orderBy: { name: 'asc' },
     include: { character: true, location: true, organisation: true }
   });
 
-  // 2. Fetch Recent Logs
+  // 2. Fetch Recent Logs (Sorted by ID to ensure newest created/imported show first)
   const recentPosts = await prisma.post.findMany({
     take: 5,
-    orderBy: { id: 'desc' },
+    orderBy: { entityId: 'desc' }, 
     include: { entity: true }
   });
-
-  // 3. Stats
-  const stats = {
-    chars: await prisma.character.count(),
-    locs: await prisma.location.count(),
-    orgs: await prisma.organisation.count(),
-    notes: await prisma.note.count(),
-  };
 
   return (
     <div className="space-y-12">
@@ -39,7 +29,7 @@ export default async function Dashboard() {
         <p className="mt-2 text-slate-500">Welcome back, Dungeon Master.</p>
       </div>
 
-      {/* 1. FEATURED / HONOR CARDS */}
+      {/* 1. FEATURED CAROUSEL */}
       {featuredEntities.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-slate-800 flex items-center">
@@ -60,7 +50,6 @@ export default async function Dashboard() {
                       src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
                       className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
                       alt={entity.name}
-                      // --- FOCAL POINT APPLIED HERE ---
                       style={{
                         objectPosition: `${entity.focal_x || 50}% ${entity.focal_y || 50}%`
                       }}
@@ -123,7 +112,8 @@ export default async function Dashboard() {
                    </div>
                  </div>
                  <div className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">
-                   #{post.id}
+                   {/* We display createdAt, but we SORTED by ID above */}
+                   {new Date(post.createdAt).toLocaleDateString()}
                  </div>
               </div>
             </Link>
@@ -134,34 +124,6 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* 3. STATS */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-8 border-t border-slate-200">
-        <StatCard label="Characters" value={stats.chars} icon={UserGroupIcon} color="blue" />
-        <StatCard label="Locations" value={stats.locs} icon={MapIcon} color="green" />
-        <StatCard label="Organisations" value={stats.orgs} icon={SparklesIcon} color="purple" />
-        <StatCard label="Notes" value={stats.notes} icon={DocumentTextIcon} color="amber" />
-      </div>
-
-    </div>
-  );
-}
-
-function StatCard({ label, value, icon: Icon, color }: any) {
-  const colors: any = {
-    blue: "bg-blue-100 text-blue-600",
-    green: "bg-green-100 text-green-600",
-    purple: "bg-purple-100 text-purple-600",
-    amber: "bg-amber-100 text-amber-600",
-  };
-  return (
-    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-      <div className={`p-3 rounded-lg ${colors[color]}`}>
-        <Icon className="h-6 w-6" />
-      </div>
-      <div>
-        <div className="text-2xl font-bold text-slate-900">{value}</div>
-        <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">{label}</div>
-      </div>
     </div>
   );
 }

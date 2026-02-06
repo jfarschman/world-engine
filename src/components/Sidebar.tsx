@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { logout } from '@/app/actions';
 import SidebarSearch from './SidebarSearch';
@@ -23,7 +22,6 @@ const navItems = [
   { name: 'Locations', href: '/locations', icon: MapIcon, type: 'Location' },
   { name: 'Organisations', href: '/organisations', icon: BuildingLibraryIcon, type: 'Organisation' },
   { name: 'Families', href: '/families', icon: UsersIcon, type: 'Family' },
-  // UPDATED: Label is "Ancestries", Link is "/ancestries", but DB type remains "Race"
   { name: 'Ancestries', href: '/ancestries', icon: SparklesIcon, type: 'Race' },
   { name: 'Notes', href: '/notes', icon: DocumentTextIcon, type: 'Note' },
   { name: 'Journals', href: '/journals', icon: BookOpenIcon }, 
@@ -33,20 +31,14 @@ export default async function Sidebar() {
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
 
-  // Fetch recent journals for the bottom section
-  // PERFORMANCE: take: 5 is good for t3.small
-  const recentPosts = await prisma.post.findMany({
-    take: 5,
-    orderBy: { id: 'desc' },
-    include: { entity: true }
-  });
-
   return (
     <div className="flex h-full w-full flex-col bg-slate-900 text-white overflow-y-auto">
 
-      {/* Brand */}
+      {/* Brand: Lil (Blue) Shoppe (White) */}
       <div className="flex h-16 items-center justify-center border-b border-slate-800 bg-slate-950 px-4 shrink-0">
-        <h1 className="text-xl font-bold tracking-widest text-blue-400">LORE<span className="text-white">DB</span></h1>
+        <h1 className="text-xl font-bold tracking-widest text-blue-400">
+          Lil <span className="text-white">Shoppe</span>
+        </h1>
       </div>
 
       {/* Search */}
@@ -78,32 +70,6 @@ export default async function Sidebar() {
             )}
           </div>
         ))}
-
-        {/* RECENT ACTIVITY */}
-        {recentPosts.length > 0 && (
-          <div className="pt-6 pb-2">
-            <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              Recent Activity
-            </h3>
-            <div className="space-y-1">
-              {recentPosts.map(post => (
-                <Link 
-                  key={post.id}
-                  href={`/entity/${post.entityId}?open=${post.id}`}
-                  className="group flex items-center px-3 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors truncate"
-                >
-                  <BookOpenIcon className="mr-3 h-4 w-4 flex-shrink-0 text-slate-600 group-hover:text-amber-500" />
-                  <span className="truncate">
-                    {post.name}
-                    <span className="block text-[10px] text-slate-600 group-hover:text-slate-500">
-                      on {post.entity.name}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Footer */}
