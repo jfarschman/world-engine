@@ -2,21 +2,26 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import RichTextRenderer from '@/components/RichTextRenderer';
+import { cookies } from 'next/headers'; // <--- Added this
 
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
-  // 1. Fetch Featured Entities
+  // 1. Check Login Status
+  const cookieStore = await cookies();
+  const isLoggedIn = cookieStore.has('lore_session');
+
+  // 2. Fetch Featured Entities
   const featuredEntities = await prisma.entity.findMany({
     where: { is_featured: true },
     orderBy: { name: 'asc' },
     include: { character: true, location: true, organisation: true }
   });
 
-  // 2. Fetch Recent Logs (Sorted by ID to ensure newest created/imported show first)
+  // 3. Fetch Recent Logs (Sorted by ID descending so new posts appear first)
   const recentPosts = await prisma.post.findMany({
     take: 5,
-    orderBy: { entityId: 'desc' }, 
+    orderBy: { id: 'desc' }, 
     include: { entity: true }
   });
 
@@ -26,7 +31,10 @@ export default async function Dashboard() {
       {/* HEADER */}
       <div className="border-b border-slate-200 pb-4">
         <h1 className="text-3xl font-extrabold text-slate-900">Dashboard</h1>
-        <p className="mt-2 text-slate-500">Welcome back, Dungeon Master.</p>
+        <p className="mt-2 text-slate-500">
+          {/* Conditional Greeting */}
+          {isLoggedIn ? "Welcome back, Dungeon Master." : "Welcome to the Chronicles."}
+        </p>
       </div>
 
       {/* 1. FEATURED CAROUSEL */}
@@ -112,7 +120,6 @@ export default async function Dashboard() {
                    </div>
                  </div>
                  <div className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">
-                   {/* We display createdAt, but we SORTED by ID above */}
                    {new Date(post.createdAt).toLocaleDateString()}
                  </div>
               </div>
