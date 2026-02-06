@@ -41,6 +41,7 @@ export async function createEntity(formData: FormData) {
   const name = formData.get('name') as string;
   const type = formData.get('type') as string;
   const entry = formData.get('entry') as string;
+  const is_private = formData.get('is_private') === 'on';
   
   const focal_x = parseInt(formData.get('focal_x') as string) || 50;
   const focal_y = parseInt(formData.get('focal_y') as string) || 50;
@@ -60,6 +61,7 @@ export async function createEntity(formData: FormData) {
     parentId, 
     focal_x,
     focal_y,
+    is_private,
     ...(image_uuid && { image_uuid, image_ext }),
   };
 
@@ -112,7 +114,7 @@ export async function createEntity(formData: FormData) {
     data: entityData,
   });
 
-  revalidatePath('/'); // Refresh Dashboard
+  revalidatePath('/');
   redirect(`/entity/${newEntity.id}`);
 }
 
@@ -126,6 +128,7 @@ export async function updateEntity(formData: FormData) {
   const focal_x = parseInt(formData.get('focal_x') as string);
   const focal_y = parseInt(formData.get('focal_y') as string);
   const is_featured = formData.get('is_featured') === 'on';
+  const is_private = formData.get('is_private') === 'on';
 
   if (!id || !name) throw new Error('Missing required fields');
 
@@ -136,6 +139,7 @@ export async function updateEntity(formData: FormData) {
     type,
     entry,
     is_featured,
+    is_private,
   };
 
   if (!isNaN(focal_x)) updateData.focal_x = focal_x;
@@ -225,7 +229,7 @@ export async function updateEntity(formData: FormData) {
     data: updateData,
   });
 
-  revalidatePath('/'); // Update Dashboard
+  revalidatePath('/'); 
   revalidatePath(`/entity/${id}`);
 }
 
@@ -249,9 +253,13 @@ export async function createPost(formData: FormData) {
   const entityId = parseInt(formData.get('entity_id') as string);
   const name = formData.get('name') as string;
   const entry = formData.get('entry') as string;
-  await prisma.post.create({ data: { name, entry, entityId, position: 0 } });
+  const is_private = formData.get('is_private') === 'on'; // <--- NEW
+
+  await prisma.post.create({ 
+    data: { name, entry, entityId, position: 0, is_private } 
+  });
   
-  revalidatePath('/'); // FIX: Refresh Dashboard
+  revalidatePath('/');
   revalidatePath(`/entity/${entityId}`);
 }
 
@@ -263,13 +271,14 @@ export async function updatePost(formData: FormData) {
   const name = formData.get('name') as string;
   const entry = formData.get('entry') as string;
   const entityId = parseInt(formData.get('entity_id') as string);
+  const is_private = formData.get('is_private') === 'on'; // <--- NEW
 
   await prisma.post.update({
     where: { id },
-    data: { name, entry },
+    data: { name, entry, is_private },
   });
 
-  revalidatePath('/'); // FIX: Refresh Dashboard
+  revalidatePath('/');
   revalidatePath(`/entity/${entityId}`);
 }
 
@@ -281,7 +290,7 @@ export async function deletePost(id: number) {
   
   await prisma.post.delete({ where: { id } });
   
-  revalidatePath('/'); // FIX: Refresh Dashboard
+  revalidatePath('/');
   if (post) revalidatePath(`/entity/${post.entityId}`);
 }
 

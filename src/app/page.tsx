@@ -2,26 +2,31 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import RichTextRenderer from '@/components/RichTextRenderer';
-import { cookies } from 'next/headers'; // <--- Added this
+import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
-  // 1. Check Login Status
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
 
-  // 2. Fetch Featured Entities
+  // 1. FEATURED: Hide private entities if logged out
   const featuredEntities = await prisma.entity.findMany({
-    where: { is_featured: true },
+    where: { 
+      is_featured: true,
+      ...(isLoggedIn ? {} : { is_private: false }) // <--- FILTER ADDED
+    },
     orderBy: { name: 'asc' },
     include: { character: true, location: true, organisation: true }
   });
 
-  // 3. Fetch Recent Logs (Sorted by ID descending so new posts appear first)
+  // 2. RECENT POSTS: Hide posts that belong to private entities if logged out
   const recentPosts = await prisma.post.findMany({
     take: 5,
     orderBy: { id: 'desc' }, 
+    where: {
+      ...(isLoggedIn ? {} : { entity: { is_private: false } }) // <--- FILTER ADDED
+    },
     include: { entity: true }
   });
 
@@ -32,7 +37,6 @@ export default async function Dashboard() {
       <div className="border-b border-slate-200 pb-4">
         <h1 className="text-3xl font-extrabold text-slate-900">Dashboard</h1>
         <p className="mt-2 text-slate-500">
-          {/* Conditional Greeting */}
           {isLoggedIn ? "Welcome back, Dungeon Master." : "Welcome to the Chronicles."}
         </p>
       </div>
@@ -51,7 +55,6 @@ export default async function Dashboard() {
                 key={entity.id} 
                 className="group flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg hover:border-blue-300 transition-all h-full"
               >
-                {/* IMAGE HEADER */}
                 <Link href={`/entity/${entity.id}`} className="block relative w-full aspect-video bg-slate-800 overflow-hidden">
                   {entity.image_uuid ? (
                     <img 
@@ -66,7 +69,6 @@ export default async function Dashboard() {
                     <div className="w-full h-full opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-100 via-slate-400 to-slate-900"></div>
                   )}
                   
-                  {/* TITLE OVERLAY */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-12">
                       <h3 className="text-xl font-bold text-white leading-tight group-hover:text-blue-200">
                         {entity.name}
@@ -77,7 +79,6 @@ export default async function Dashboard() {
                   </div>
                 </Link>
 
-                {/* CONTENT PREVIEW */}
                 <div className="relative p-4 flex-1">
                   <div className="h-40 overflow-hidden prose prose-sm prose-slate max-w-none text-slate-600">
                     <RichTextRenderer content={entity.entry} />
@@ -85,7 +86,6 @@ export default async function Dashboard() {
                   <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                 </div>
                 
-                {/* FOOTER */}
                 <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 text-xs text-slate-400 font-medium flex justify-between z-10 relative">
                     <span>Updated {new Date(entity.updatedAt).toLocaleDateString()}</span>
                     <Link href={`/entity/${entity.id}`} className="group-hover:translate-x-1 transition-transform text-blue-500 font-bold">

@@ -6,16 +6,17 @@ import { updatePost } from '@/app/actions';
 import parse, { domToReact } from 'html-react-parser';
 import EntityLink from './EntityLink';
 import RichTextEditor from './RichTextEditor';
-import { PencilSquareIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, EyeSlashIcon } from '@heroicons/react/24/outline'; // <--- IMPORT
 
 interface JournalSessionProps {
   id: number;
   name: string;
   initialOpen?: boolean;
-  isLoggedIn: boolean; // <--- ADD THIS
+  isLoggedIn: boolean;
+  isPrivate: boolean; // <--- NEW PROP
 }
 
-export default function JournalSession({ id, name, initialOpen = false, isLoggedIn }: JournalSessionProps) {
+export default function JournalSession({ id, name, initialOpen = false, isLoggedIn, isPrivate }: JournalSessionProps) {
   // View State
   const [isOpen, setIsOpen] = useState(initialOpen);
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,7 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
   // Data State
   const [content, setContent] = useState<string | null>(null);
   const [currentName, setCurrentName] = useState(name);
+  const [currentPrivate, setCurrentPrivate] = useState(isPrivate); // <--- TRACK STATE
   
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
@@ -32,6 +34,11 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
   useEffect(() => {
     setCurrentName(name);
   }, [name]);
+
+  useEffect(() => {
+    // Sync if prop changes (though usually handled by parent re-render)
+    setCurrentPrivate(isPrivate);
+  }, [isPrivate]);
 
   useEffect(() => {
     if (isOpen && content === null && !loading) {
@@ -128,6 +135,7 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
     setIsSaving(true);
     await updatePost(formData);
     setCurrentName(formData.get('name') as string);
+    setCurrentPrivate(formData.get('is_private') === 'on'); // Update state locally
     setContent(editorContent); 
     setIsSaving(false);
     setIsEditing(false);
@@ -142,13 +150,19 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
           onClick={toggleOpen}
           className="w-full text-left py-4 flex justify-between items-center hover:bg-slate-50 transition-colors pr-24" 
         >
-          <span className={`text-xl font-bold ${isOpen ? 'text-blue-800' : 'text-slate-700 group-hover/header:text-blue-600'}`}>
-            {currentName}
-          </span>
+          <div className="flex items-center">
+             {/* VISUAL INDICATOR FOR DM */}
+             {isLoggedIn && currentPrivate && (
+               <EyeSlashIcon className="h-4 w-4 text-slate-400 mr-2" title="Private Entry - Visible only to DM" />
+             )}
+
+             <span className={`text-xl font-bold ${isOpen ? 'text-blue-800' : 'text-slate-700 group-hover/header:text-blue-600'}`}>
+                {currentName}
+             </span>
+          </div>
         </button>
 
         {/* EDIT PENCIL */}
-        {/* CHECK IS LOGGED IN HERE */}
         {!isEditing && isLoggedIn && ( 
           <div className="absolute top-4 right-20 z-20 transition-opacity">
             <button 
@@ -181,13 +195,29 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
                   <input type="hidden" name="entity_id" value="0" /> 
                   <input type="hidden" name="entry" value={editorContent} />
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-                    <input 
-                      name="name" 
-                      defaultValue={currentName} 
-                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-bold text-slate-700"
-                    />
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+                      <input 
+                        name="name" 
+                        defaultValue={currentName} 
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-bold text-slate-700"
+                      />
+                    </div>
+                    
+                    {/* PRIVATE CHECKBOX */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">&nbsp;</label>
+                      <label className="flex items-center px-3 py-2 bg-white border border-slate-300 rounded-md cursor-pointer hover:bg-slate-50">
+                        <input 
+                          type="checkbox" 
+                          name="is_private" 
+                          defaultChecked={currentPrivate}
+                          className="h-4 w-4 text-red-600 border-slate-300 rounded focus:ring-red-500" 
+                        />
+                        <span className="ml-2 text-sm font-bold text-slate-700">Private?</span>
+                      </label>
+                    </div>
                   </div>
 
                   <div>

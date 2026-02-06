@@ -103,6 +103,7 @@ model Post {
   id        Int      @id @default(autoincrement())
   name      String
   entry     String?  @db.Text
+  is_private Boolean @default(false)
   position  Int      @default(0)
   createdAt DateTime @default(now())
   entityId  Int

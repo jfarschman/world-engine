@@ -71,12 +71,21 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       race: true,
       note: true,
       posts: {
+        // --- PRIVACY FILTER ---
+        // If logged in: undefined (show all).
+        // If logged out: { is_private: false } (hide private posts).
+        where: isLoggedIn ? undefined : { is_private: false },
         orderBy: { createdAt: 'desc' },
       }
     }
   });
 
   if (!entity) return notFound();
+
+  // Privacy Check for the Entity itself
+  if (entity.is_private && !isLoggedIn) {
+    return notFound();
+  }
 
   // 3. FETCH LISTS FOR EDIT DROPDOWNS
   const [locations, races, families, orgs] = await Promise.all([
@@ -87,11 +96,10 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
   ]);
 
   // 4. HELPER: EXTRACT NAMES FROM JOIN TABLES
-  // FIX: Updated to look for item[key].entity.name instead of item[key].name
   const getJoinedNames = (list: any[], key: string) => {
     if (!list || !Array.isArray(list)) return null;
     return list
-      .map((item) => item[key]?.entity?.name) // <--- CHANGED THIS
+      .map((item) => item[key]?.entity?.name)
       .filter(Boolean)
       .join(', ');
   };
@@ -103,7 +111,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           <>
             <Attribute label="Title/Class" value={entity.character?.title} />
             <Attribute label="Age" value={entity.character?.age} />
-            {/* FIX: Access .entity.name */}
             <Attribute label="Race" value={entity.character?.race?.entity?.name} />
             <Attribute label="Family" value={getJoinedNames(entity.character?.families || [], 'family')} />
             <Attribute label="Organisation" value={getJoinedNames(entity.character?.organisations || [], 'organisation')} />
@@ -211,6 +218,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                         name={post.name} 
                         initialOpen={open === post.id.toString()}
                         isLoggedIn={isLoggedIn}
+                        isPrivate={post.is_private} // <--- PASSING THE PROP
                       />
                     </div>
                   ))}

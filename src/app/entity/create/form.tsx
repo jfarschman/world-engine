@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createEntity } from '@/app/actions';
 import { useSearchParams } from 'next/navigation';
 import RichTextEditor from '@/components/RichTextEditor';
-import ImageUploader from '@/components/ImageUploader'; // <--- IMPORT THIS
+import ImageUploader from '@/components/ImageUploader'; 
 
 interface SimpleEntity { id: number; name: string; }
 
@@ -28,27 +28,41 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
   return (
     <form action={createEntity} className="space-y-8">
       
-      {/* TYPE SELECTOR */}
-      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-        <label className="block text-sm font-medium text-slate-700 mb-2">Entity Type</label>
-        <div className="flex flex-wrap gap-2">
-          {['Character', 'Location', 'Organisation', 'Family', 'Race', 'Note'].map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setType(t)}
-              className={`
-                px-4 py-2 rounded-full text-sm font-bold transition-all
-                ${type === t 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300'}
-              `}
-            >
-              {t}
-            </button>
-          ))}
+      {/* TYPE & PRIVACY SELECTOR */}
+      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Entity Type</label>
+          <div className="flex flex-wrap gap-2">
+            {['Character', 'Location', 'Organisation', 'Family', 'Race', 'Note'].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setType(t)}
+                className={`
+                  px-4 py-2 rounded-full text-sm font-bold transition-all
+                  ${type === t 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300'}
+                `}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <input type="hidden" name="type" value={type} />
         </div>
-        <input type="hidden" name="type" value={type} />
+
+        {/* Private Toggle */}
+        <div className="pt-4 md:pt-0">
+           <label className="inline-flex items-center cursor-pointer p-2 rounded-md hover:bg-slate-200 transition-colors">
+             <input 
+               type="checkbox" 
+               name="is_private" 
+               className="h-5 w-5 text-red-600 border-slate-300 rounded focus:ring-red-500" 
+             />
+             <span className="ml-2 text-sm font-bold text-slate-700">Mark as Private</span>
+           </label>
+        </div>
       </div>
 
       {/* CORE FIELDS */}
@@ -58,11 +72,10 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
           <input name="name" type="text" required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border py-2 px-3" placeholder="Entity Name" />
         </div>
         
-        {/* --- IMAGE UPLOADER REPLACES TEXT INPUT --- */}
+        {/* IMAGE UPLOADER */}
         <div className="md:col-span-2 border-t border-slate-100 pt-4">
            <ImageUploader />
         </div>
-        {/* ------------------------------------------ */}
 
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>

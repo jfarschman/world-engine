@@ -51,7 +51,7 @@ export default function EntityEditForm({ entity, lists, onCancel }: EntityEditFo
       {/* Hidden input to pass the rich text HTML */}
       <input type="hidden" name="entry" value={entryContent} />
 
-      {/* HEADER: Name, Type, Featured */}
+      {/* HEADER: Name, Type, Flags */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
         <div className="md:col-span-6">
           <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
@@ -64,7 +64,6 @@ export default function EntityEditForm({ entity, lists, onCancel }: EntityEditFo
         </div>
         <div className="md:col-span-4">
           <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
-          {/* We lock the type in edit mode to prevent data loss (e.g. turning a Location into a Character loses the parent_id) */}
           <select 
             name="type" 
             defaultValue={entity.type} 
@@ -73,7 +72,8 @@ export default function EntityEditForm({ entity, lists, onCancel }: EntityEditFo
             <option value={entity.type}>{entity.type}</option>
           </select>
         </div>
-        <div className="md:col-span-2 pt-6">
+        <div className="md:col-span-2 pt-6 flex flex-col space-y-2">
+           {/* Featured Checkbox */}
            <label className="inline-flex items-center cursor-pointer">
              <input 
                type="checkbox" 
@@ -83,10 +83,21 @@ export default function EntityEditForm({ entity, lists, onCancel }: EntityEditFo
              />
              <span className="ml-2 text-sm font-bold text-slate-700">Featured?</span>
            </label>
+
+           {/* Private Checkbox */}
+           <label className="inline-flex items-center cursor-pointer">
+             <input 
+               type="checkbox" 
+               name="is_private" 
+               defaultChecked={entity.is_private} 
+               className="h-5 w-5 text-red-600 border-slate-300 rounded focus:ring-red-500" 
+             />
+             <span className="ml-2 text-sm font-bold text-slate-700">Private?</span>
+           </label>
         </div>
       </div>
 
-      {/* --- DYNAMIC FIELDS (Restored Tech Debt) --- */}
+      {/* --- DYNAMIC FIELDS --- */}
       <div className="bg-slate-50 p-4 rounded-md border border-slate-200 space-y-4">
         
         {/* CHARACTER SPECIFIC FIELDS */}
@@ -111,7 +122,6 @@ export default function EntityEditForm({ entity, lists, onCancel }: EntityEditFo
                <label className="block text-sm font-medium text-slate-700">Family</label>
                <select 
                  name="family_id" 
-                 // FIX: Access familyId via the families array (many-to-many)
                  defaultValue={entity.character?.families?.[0]?.familyId || ""} 
                  className="w-full px-3 py-2 border rounded-md bg-white"
                >
@@ -123,7 +133,6 @@ export default function EntityEditForm({ entity, lists, onCancel }: EntityEditFo
                <label className="block text-sm font-medium text-slate-700">Organisation</label>
                <select 
                  name="organisation_id" 
-                 // FIX: Access organisationId via the organisations array (many-to-many)
                  defaultValue={entity.character?.organisations?.[0]?.organisationId || ""} 
                  className="w-full px-3 py-2 border rounded-md bg-white"
                >
@@ -147,7 +156,6 @@ export default function EntityEditForm({ entity, lists, onCancel }: EntityEditFo
                <label className="block text-sm font-medium text-slate-700">Parent Location</label>
                <select name="parent_location_id" defaultValue={entity.location?.parentLocationId || ""} className="w-full px-3 py-2 border rounded-md bg-white">
                  <option value="">-- Top Level --</option>
-                 {/* Filter out self to prevent setting self as parent */}
                  {lists?.locations.filter(l => l.id !== entity.id).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                </select>
              </div>

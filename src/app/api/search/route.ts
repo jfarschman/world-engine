@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,13 +14,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ results: [], total: 0 });
   }
 
+  // 1. CHECK LOGIN STATUS
+  const cookieStore = await cookies();
+  const isLoggedIn = cookieStore.has('lore_session');
+
   // Sanitize input
+  // (Note: cleanQuery formats it for certain TS query types, but plainto_tsquery handles raw text well too. 
+  // We'll stick to the logic you provided).
   const cleanQuery = query.replace(/[^\w\s]/gi, '').trim().split(/\s+/).join(' & ');
 
   if (!cleanQuery) return NextResponse.json({ results: [], total: 0 });
 
   try {
     // We select image fields now, and JOIN posts to their parent to get the image
+    // PRIVACY LOGIC ADDED: "AND (${isLoggedIn} OR ... = false)"
+    
     const results = await prisma.$queryRaw`
       SELECT 
         id, 
@@ -33,6 +42,7 @@ export async function GET(request: Request) {
         1 as priority
       FROM "Entity"
       WHERE to_tsvector('english', name || ' ' || coalesce("entry", '')) @@ plainto_tsquery('english', ${query})
+      AND (${isLoggedIn} OR "is_private" = false)
       
       UNION ALL
       
@@ -49,6 +59,7 @@ export async function GET(request: Request) {
       FROM "Post" p
       JOIN "Entity" e ON p."entityId" = e.id
       WHERE to_tsvector('english', p.name || ' ' || coalesce(p."entry", '')) @@ plainto_tsquery('english', ${query})
+      AND (${isLoggedIn} OR e."is_private" = false)
       
       ORDER BY priority ASC, rank DESC
       LIMIT ${limit} OFFSET ${offset};

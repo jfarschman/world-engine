@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { stripKankaMentions } from '@/lib/utils';
+import { cookies } from 'next/headers'; // <--- IMPORT
 
 export async function GET(
   request: Request,
@@ -8,6 +9,10 @@ export async function GET(
 ) {
   const { id: idStr } = await params;
   const id = parseInt(idStr);
+
+  // LOGIN CHECK
+  const cookieStore = await cookies();
+  const isLoggedIn = cookieStore.has('lore_session');
 
   if (isNaN(id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
@@ -20,17 +25,22 @@ export async function GET(
         type: true,
         image_uuid: true,
         image_ext: true,
-        // --- ADDED FOCAL POINTS HERE ---
         focal_x: true,
         focal_y: true,
-        // -------------------------------
         entry: true,
+        is_private: true, // <--- SELECT THIS
       },
     });
 
     if (!entity) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    // 1. Resolve Mentions (turn [Link] into Link)
+    // --- SECURITY CHECK ---
+    if (entity.is_private && !isLoggedIn) {
+       return NextResponse.json({ error: 'Private' }, { status: 403 });
+    }
+    // ----------------------
+
+    // 1. Resolve Mentions
     let cleanText = stripKankaMentions(entity.entry || '');
     
     // 2. Strip HTML Tags

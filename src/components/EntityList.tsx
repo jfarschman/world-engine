@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { cookies } from 'next/headers'; // <--- IMPORT
 
 interface EntityListProps {
   type: string;
@@ -11,10 +12,19 @@ interface EntityListProps {
 export default async function EntityList({ type, title, page = 1 }: EntityListProps) {
   const pageSize = 25;
   const skip = (page - 1) * pageSize;
+  
+  // LOGIN CHECK
+  const cookieStore = await cookies();
+  const isLoggedIn = cookieStore.has('lore_session');
 
-  // 1. Fetch Data with Pagination
+  const whereClause = {
+    type: type,
+    ...(isLoggedIn ? {} : { is_private: false }) // <--- FILTER ADDED
+  };
+
+  // 1. Fetch Data with Pagination AND Filter
   const entities = await prisma.entity.findMany({
-    where: { type: type },
+    where: whereClause, // <--- USE CLAUSE
     select: { 
       id: true, 
       name: true, 
@@ -29,8 +39,8 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
     skip: skip,
   });
 
-  // 2. Count Total for "Next" button logic
-  const totalCount = await prisma.entity.count({ where: { type: type } });
+  // 2. Count Total with SAME Filter
+  const totalCount = await prisma.entity.count({ where: whereClause }); // <--- USE CLAUSE
   const totalPages = Math.ceil(totalCount / pageSize);
   
   const hasNext = page < totalPages;
