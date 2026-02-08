@@ -94,12 +94,28 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
     return notFound();
   }
 
-  // 3. FETCH LISTS FOR EDIT DROPDOWNS
+  // 3. FETCH LISTS FOR EDIT DROPDOWNS (Now Sorted!)
   const [locations, races, families, orgs] = await Promise.all([
-    prisma.entity.findMany({ where: { type: 'Location' }, select: { id: true, name: true } }),
-    prisma.entity.findMany({ where: { type: 'Race' }, select: { id: true, name: true } }),
-    prisma.entity.findMany({ where: { type: 'Family' }, select: { id: true, name: true } }),
-    prisma.entity.findMany({ where: { type: 'Organisation' }, select: { id: true, name: true } }),
+    prisma.entity.findMany({ 
+      where: { type: 'Location' }, 
+      orderBy: { name: 'asc' }, // <--- SORTED
+      select: { id: true, name: true } 
+    }),
+    prisma.entity.findMany({ 
+      where: { type: 'Race' }, 
+      orderBy: { name: 'asc' }, // <--- SORTED
+      select: { id: true, name: true } 
+    }),
+    prisma.entity.findMany({ 
+      where: { type: 'Family' }, 
+      orderBy: { name: 'asc' }, // <--- SORTED
+      select: { id: true, name: true } 
+    }),
+    prisma.entity.findMany({ 
+      where: { type: 'Organisation' }, 
+      orderBy: { name: 'asc' }, // <--- SORTED
+      select: { id: true, name: true } 
+    }),
   ]);
 
   // 4. HELPER: EXTRACT NAMES FROM JOIN TABLES
