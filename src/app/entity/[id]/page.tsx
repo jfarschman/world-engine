@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import JournalSession from '@/components/JournalSession';
 import RichTextRenderer from '@/components/RichTextRenderer';
 import NewPostForm from '@/components/NewPostForm';
@@ -35,21 +36,20 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       parent: true,
       character: { 
         include: { 
-          // FIX: Include the 'entity' relation so we can get the Name
           race: {
             include: { entity: true }
           }, 
           families: {
             include: { 
               family: {
-                include: { entity: true } // FIX: Deep include
+                include: { entity: true } 
               } 
             }
           },
           organisations: {
             include: { 
               organisation: {
-                include: { entity: true } // FIX: Deep include
+                include: { entity: true } 
               } 
             }
           }
@@ -61,19 +61,26 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           members: {
             include: { 
               character: {
-                include: { entity: true } // FIX: Deep include
+                include: { entity: true } 
               } 
             }
           }
         } 
       },
-      family: true,
+      family: {
+        include: {
+          members: {
+            include: {
+              character: {
+                include: { entity: true }
+              }
+            }
+          }
+        }
+      },
       race: true,
       note: true,
       posts: {
-        // --- PRIVACY FILTER ---
-        // If logged in: undefined (show all).
-        // If logged out: { is_private: false } (hide private posts).
         where: isLoggedIn ? undefined : { is_private: false },
         orderBy: { createdAt: 'desc' },
       }
@@ -134,6 +141,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       case 'Family':
         return (
           <>
+            <Attribute label="Members" value={entity.family?.members?.length || 0} />
             {entity.family?.is_extinct && <Attribute label="Status" value="⚰️ Extinct" />}
           </>
         );
@@ -149,6 +157,13 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
         return null;
     }
   };
+
+  // --- MEMBER LIST LOGIC ---
+  const members = entity.type === 'Organisation' 
+    ? entity.organisation?.members 
+    : entity.type === 'Family' 
+    ? entity.family?.members 
+    : null;
 
   return (
     <EntityEditableBlock 
@@ -190,6 +205,63 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                </div>
             )}
 
+            {/* MEMBERS LIST (Compact Grid) */}
+            {members && members.length > 0 && (
+              <div className="space-y-3">
+                 <h3 className="text-lg font-bold text-slate-800 flex items-center">
+                   Members 
+                   <span className="ml-2 text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                     {members.length}
+                   </span>
+                 </h3>
+                 {/* GRID: 3 across, tighter gaps */}
+                 <div className="grid grid-cols-3 gap-2">
+                   {members.map((m: any) => {
+                     const char = m.character?.entity;
+                     if (!char) return null;
+                     return (
+                       <Link 
+                         key={m.id} 
+                         href={`/entity/${char.id}`}
+                         className="group block bg-white rounded-lg border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
+                       >
+                         {/* IMAGE (Square for compactness) */}
+                         <div className="aspect-square bg-slate-100 relative">
+                            {char.image_uuid ? (
+                              <img 
+                                src={`/gallery/${char.image_uuid}.${char.image_ext}`} 
+                                alt={char.name} 
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                style={{
+                                  objectPosition: `${char.focal_x || 50}% ${char.focal_y || 50}%`
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-slate-300 font-bold text-xl">
+                                {char.name.charAt(0)}
+                              </div>
+                            )}
+                         </div>
+                         
+                         {/* TEXT FOOTER (Compact) */}
+                         <div className="p-2 border-t border-slate-100">
+                           <p className="text-xs font-bold text-slate-800 truncate group-hover:text-blue-600">
+                             {char.name}
+                           </p>
+                           {/* Role or generic label */}
+                           {m.role ? (
+                             <p className="text-[10px] text-slate-500 truncate mt-0.5">{m.role}</p>
+                           ) : (
+                             <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">Member</p>
+                           )}
+                         </div>
+                       </Link>
+                     );
+                   })}
+                 </div>
+              </div>
+            )}
+
             {/* Posts / Journal Sessions */}
             <div className="space-y-4">
               <h3 className="text-xl font-bold text-slate-800 border-b border-slate-200 pb-2">
@@ -218,7 +290,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                         name={post.name} 
                         initialOpen={open === post.id.toString()}
                         isLoggedIn={isLoggedIn}
-                        isPrivate={post.is_private} // <--- PASSING THE PROP
+                        isPrivate={post.is_private} 
                       />
                     </div>
                   ))}
