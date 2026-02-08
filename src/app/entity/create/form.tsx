@@ -96,6 +96,16 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
         {/* CHARACTER */}
         {type === 'Character' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* NEW: Role Selection */}
+            <div>
+               <label className="block text-sm font-medium text-slate-700">Role / Classification</label>
+               <select name="role" className="mt-1 block w-full border rounded-md py-2 px-3 border-slate-300 bg-white">
+                 <option value="NPC">NPC</option>
+                 <option value="Player">Player</option>
+                 <option value="Deity">Deity</option>
+               </select>
+            </div>
+            
             <div>
               <label className="block text-sm font-medium text-slate-700">Title / Class</label>
               <input name="title" type="text" className="mt-1 block w-full border rounded-md py-2 px-3 border-slate-300" />

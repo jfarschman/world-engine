@@ -37,6 +37,8 @@ model Entity {
   relationshipsIn  Relationship[] @relation("RelTarget")
   organisation Organisation?
   race         Race?
+  @@index([type])
+  @@index([name])
 }
 
 model Character {
@@ -109,6 +111,7 @@ model Post {
   createdAt DateTime @default(now())
   entityId  Int
   entity    Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  @@index([createdAt])
 }
 
 model Relationship {

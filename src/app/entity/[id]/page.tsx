@@ -89,34 +89,42 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
 
   if (!entity) return notFound();
 
-  // Privacy Check for the Entity itself
+  // Privacy Check
   if (entity.is_private && !isLoggedIn) {
     return notFound();
   }
 
-  // 3. FETCH LISTS FOR EDIT DROPDOWNS (Now Sorted!)
-  const [locations, races, families, orgs] = await Promise.all([
-    prisma.entity.findMany({ 
-      where: { type: 'Location' }, 
-      orderBy: { name: 'asc' }, // <--- SORTED
-      select: { id: true, name: true } 
-    }),
-    prisma.entity.findMany({ 
-      where: { type: 'Race' }, 
-      orderBy: { name: 'asc' }, // <--- SORTED
-      select: { id: true, name: true } 
-    }),
-    prisma.entity.findMany({ 
-      where: { type: 'Family' }, 
-      orderBy: { name: 'asc' }, // <--- SORTED
-      select: { id: true, name: true } 
-    }),
-    prisma.entity.findMany({ 
-      where: { type: 'Organisation' }, 
-      orderBy: { name: 'asc' }, // <--- SORTED
-      select: { id: true, name: true } 
-    }),
-  ]);
+  // 3. FETCH LISTS FOR EDIT DROPDOWNS (OPTIMIZED)
+  // Only fetch these massive lists if the user is actually the DM.
+  let locations: { id: number; name: string }[] = [];
+  let races: { id: number; name: string }[] = [];
+  let families: { id: number; name: string }[] = [];
+  let orgs: { id: number; name: string }[] = [];
+
+  if (isLoggedIn) {
+    [locations, races, families, orgs] = await Promise.all([
+      prisma.entity.findMany({ 
+        where: { type: 'Location' }, 
+        orderBy: { name: 'asc' }, 
+        select: { id: true, name: true } 
+      }),
+      prisma.entity.findMany({ 
+        where: { type: 'Race' }, 
+        orderBy: { name: 'asc' }, 
+        select: { id: true, name: true } 
+      }),
+      prisma.entity.findMany({ 
+        where: { type: 'Family' }, 
+        orderBy: { name: 'asc' }, 
+        select: { id: true, name: true } 
+      }),
+      prisma.entity.findMany({ 
+        where: { type: 'Organisation' }, 
+        orderBy: { name: 'asc' }, 
+        select: { id: true, name: true } 
+      }),
+    ]);
+  }
 
   // 4. HELPER: EXTRACT NAMES FROM JOIN TABLES
   const getJoinedNames = (list: any[], key: string) => {
@@ -132,6 +140,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       case 'Character':
         return (
           <>
+            <Attribute label="Role" value={entity.character?.role || "NPC"} />
             <Attribute label="Title/Class" value={entity.character?.title} />
             <Attribute label="Age" value={entity.character?.age} />
             <Attribute label="Race" value={entity.character?.race?.entity?.name} />
@@ -230,7 +239,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                      {members.length}
                    </span>
                  </h3>
-                 {/* GRID: 3 across, tighter gaps */}
                  <div className="grid grid-cols-3 gap-2">
                    {members.map((m: any) => {
                      const char = m.character?.entity;

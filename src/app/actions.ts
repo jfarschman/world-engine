@@ -74,6 +74,7 @@ export async function createEntity(formData: FormData) {
       create: {
         title: formData.get('title') as string,
         age: formData.get('age') as string,
+        role: formData.get('role') as string || 'NPC', // <--- NEW FIELD
         is_dead: formData.get('is_dead') === 'on',
         race: raceId ? { connect: { entityId: raceId } } : undefined,
         families: familyId ? { create: { family: { connect: { entityId: familyId } } } } : undefined,
@@ -165,6 +166,7 @@ export async function updateEntity(formData: FormData) {
         create: {
           title: formData.get('title') as string,
           age: formData.get('age') as string,
+          role: formData.get('role') as string || 'NPC', // <--- NEW FIELD
           is_dead: formData.get('is_dead') === 'on',
           race: raceId ? { connect: { entityId: raceId } } : undefined,
           families: familyId ? { create: { family: { connect: { entityId: familyId } } } } : undefined,
@@ -173,6 +175,7 @@ export async function updateEntity(formData: FormData) {
         update: {
           title: formData.get('title') as string,
           age: formData.get('age') as string,
+          role: formData.get('role') as string || 'NPC', // <--- NEW FIELD
           is_dead: formData.get('is_dead') === 'on',
           race: raceId ? { connect: { entityId: raceId } } : { disconnect: true },
           families: familyId 
@@ -253,7 +256,7 @@ export async function createPost(formData: FormData) {
   const entityId = parseInt(formData.get('entity_id') as string);
   const name = formData.get('name') as string;
   const entry = formData.get('entry') as string;
-  const is_private = formData.get('is_private') === 'on'; // <--- NEW
+  const is_private = formData.get('is_private') === 'on';
 
   await prisma.post.create({ 
     data: { name, entry, entityId, position: 0, is_private } 
@@ -271,7 +274,7 @@ export async function updatePost(formData: FormData) {
   const name = formData.get('name') as string;
   const entry = formData.get('entry') as string;
   const entityId = parseInt(formData.get('entity_id') as string);
-  const is_private = formData.get('is_private') === 'on'; // <--- NEW
+  const is_private = formData.get('is_private') === 'on';
 
   await prisma.post.update({
     where: { id },

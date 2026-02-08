@@ -103,6 +103,20 @@ export default function EntityEditForm({ entity, lists, onCancel }: EntityEditFo
         {/* CHARACTER SPECIFIC FIELDS */}
         {type === 'Character' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             {/* NEW: Role Selection */}
+             <div>
+               <label className="block text-sm font-medium text-slate-700">Role / Classification</label>
+               <select 
+                 name="role" 
+                 defaultValue={entity.character?.role || "NPC"} 
+                 className="w-full px-3 py-2 border rounded-md bg-white"
+               >
+                 <option value="NPC">NPC</option>
+                 <option value="Player">Player</option>
+                 <option value="Deity">Deity</option>
+               </select>
+             </div>
+             
              <div>
                <label className="block text-sm font-medium text-slate-700">Title / Class</label>
                <input name="title" defaultValue={entity.character?.title} className="w-full px-3 py-2 border rounded-md" />
