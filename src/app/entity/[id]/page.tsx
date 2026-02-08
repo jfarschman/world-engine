@@ -29,27 +29,37 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
 
-  // 2. FETCH ENTITY WITH ALL RELATIONS
+  // 2. FETCH ENTITY WITH OPTIMIZED RELATIONS
+  // We strictly select only the fields we need for display to reduce payload size.
+  const simpleEntitySelect = {
+    id: true,
+    name: true,
+    image_uuid: true,
+    image_ext: true,
+    focal_x: true,
+    focal_y: true,
+  };
+
   const entity = await prisma.entity.findUnique({
     where: { id },
     include: {
-      parent: true,
+      parent: { select: { id: true, name: true } },
       character: { 
         include: { 
           race: {
-            include: { entity: true }
+            include: { entity: { select: { id: true, name: true } } }
           }, 
           families: {
             include: { 
               family: {
-                include: { entity: true } 
+                include: { entity: { select: { id: true, name: true } } } 
               } 
             }
           },
           organisations: {
             include: { 
               organisation: {
-                include: { entity: true } 
+                include: { entity: { select: { id: true, name: true } } } 
               } 
             }
           }
@@ -61,7 +71,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           members: {
             include: { 
               character: {
-                include: { entity: true } 
+                include: { entity: { select: simpleEntitySelect } } 
               } 
             }
           }
@@ -72,7 +82,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           members: {
             include: {
               character: {
-                include: { entity: true }
+                include: { entity: { select: simpleEntitySelect } }
               }
             }
           }
@@ -94,8 +104,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
     return notFound();
   }
 
-  // 3. FETCH LISTS FOR EDIT DROPDOWNS (OPTIMIZED)
-  // Only fetch these massive lists if the user is actually the DM.
+  // 3. FETCH LISTS FOR EDIT DROPDOWNS (Only for DM)
   let locations: { id: number; name: string }[] = [];
   let races: { id: number; name: string }[] = [];
   let families: { id: number; name: string }[] = [];
@@ -126,7 +135,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
     ]);
   }
 
-  // 4. HELPER: EXTRACT NAMES FROM JOIN TABLES
+  // 4. HELPER: EXTRACT NAMES
   const getJoinedNames = (list: any[], key: string) => {
     if (!list || !Array.isArray(list)) return null;
     return list
@@ -249,7 +258,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                          href={`/entity/${char.id}`}
                          className="group block bg-white rounded-lg border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
                        >
-                         {/* IMAGE (Square for compactness) */}
+                         {/* IMAGE (Square) */}
                          <div className="aspect-square bg-slate-100 relative">
                             {char.image_uuid ? (
                               <img 
@@ -267,12 +276,11 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                             )}
                          </div>
                          
-                         {/* TEXT FOOTER (Compact) */}
+                         {/* TEXT FOOTER */}
                          <div className="p-2 border-t border-slate-100">
                            <p className="text-xs font-bold text-slate-800 truncate group-hover:text-blue-600">
                              {char.name}
                            </p>
-                           {/* Role or generic label */}
                            {m.role ? (
                              <p className="text-[10px] text-slate-500 truncate mt-0.5">{m.role}</p>
                            ) : (
