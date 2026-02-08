@@ -42,6 +42,7 @@ model Entity {
 model Character {
   entityId      Int                  @id
   age           String?
+  role          String?              @default("NPC")
   sex           String?
   title         String?
   is_dead       Boolean              @default(false)
