@@ -70,10 +70,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           members: {
             include: { 
               character: {
-                // Fetch is_dead so we can grey out the dead ones
-                include: { 
-                  entity: { select: simpleEntitySelect } 
-                } 
+                include: { entity: { select: simpleEntitySelect } } 
               } 
             }
           }
@@ -84,10 +81,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           members: {
             include: {
               character: {
-                // Fetch is_dead here too
-                include: { 
-                  entity: { select: simpleEntitySelect } 
-                }
+                include: { entity: { select: simpleEntitySelect } }
               }
             }
           }
@@ -98,6 +92,14 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       posts: {
         where: isLoggedIn ? undefined : { is_private: false },
         orderBy: { createdAt: 'desc' },
+        // --- PERFORMANCE FIX: SELECT ONLY METADATA ---
+        select: {
+          id: true,
+          name: true,
+          is_private: true,
+          createdAt: true,
+          // 'entry' is EXCLUDED. It will be fetched by JournalSession only when clicked.
+        }
       }
     }
   });
@@ -257,7 +259,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                      const char = m.character?.entity;
                      if (!char) return null;
                      
-                     // CHECK IF DEAD
                      const isDead = m.character?.is_dead;
 
                      return (
@@ -271,7 +272,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                               <img 
                                 src={`/gallery/${char.image_uuid}.${char.image_ext}`} 
                                 alt={char.name} 
-                                // --- APPLY GRAYSCALE ---
                                 className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${isDead ? 'grayscale' : ''}`}
                                 style={{
                                   objectPosition: `${char.focal_x || 50}% ${char.focal_y || 50}%`
