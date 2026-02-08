@@ -9,11 +9,10 @@ interface EntityPreview {
   type: string;
   image_uuid: string | null;
   image_ext: string | null;
-  // --- ADDED FOCAL POINTS ---
   focal_x?: number;
   focal_y?: number;
-  // --------------------------
   entry: string;
+  is_inactive?: boolean; // <--- NEW PROP
 }
 
 export default function EntityLink({ id, name, children }: { id: number, name: string, children: React.ReactNode }) {
@@ -46,7 +45,6 @@ export default function EntityLink({ id, name, children }: { id: number, name: s
 
     setIsOpen(true);
     
-    // Fetch Data
     if (!data && !loading) {
       setLoading(true);
       try {
@@ -103,8 +101,7 @@ export default function EntityLink({ id, name, children }: { id: number, name: s
                   <img
                     src={`/gallery/${data.image_uuid}.${data.image_ext}`}
                     alt={data.name}
-                    className="absolute inset-0 h-full w-full object-cover"
-                    // --- FOCAL POINT APPLIED HERE ---
+                    className={`absolute inset-0 h-full w-full object-cover ${data.is_inactive ? 'grayscale' : ''}`} // <--- APPLIED HERE
                     style={{
                       objectPosition: `${data.focal_x || 50}% ${data.focal_y || 50}%`
                     }}

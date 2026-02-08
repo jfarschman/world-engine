@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { cookies } from 'next/headers'; // <--- IMPORT
+import { cookies } from 'next/headers';
 
 interface EntityListProps {
   type: string;
@@ -19,12 +19,12 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
 
   const whereClause = {
     type: type,
-    ...(isLoggedIn ? {} : { is_private: false }) // <--- FILTER ADDED
+    ...(isLoggedIn ? {} : { is_private: false })
   };
 
-  // 1. Fetch Data with Pagination AND Filter
+  // 1. Fetch Data with Status Flags
   const entities = await prisma.entity.findMany({
-    where: whereClause, // <--- USE CLAUSE
+    where: whereClause,
     select: { 
       id: true, 
       name: true, 
@@ -33,14 +33,20 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
       image_ext: true,
       focal_x: true,
       focal_y: true,
+      // --- FETCH STATUS FLAGS ---
+      character: { select: { is_dead: true } },
+      location: { select: { is_destroyed: true } },
+      organisation: { select: { is_defunct: true } },
+      family: { select: { is_extinct: true } },
+      race: { select: { is_extinct: true } },
     },
     orderBy: { name: 'asc' },
     take: pageSize,
     skip: skip,
   });
 
-  // 2. Count Total with SAME Filter
-  const totalCount = await prisma.entity.count({ where: whereClause }); // <--- USE CLAUSE
+  // 2. Count Total
+  const totalCount = await prisma.entity.count({ where: whereClause });
   const totalPages = Math.ceil(totalCount / pageSize);
   
   const hasNext = page < totalPages;
@@ -59,40 +65,50 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
 
       {/* THE GRID */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {entities.map((entity) => (
-          <Link 
-            key={entity.id} 
-            href={`/entity/${entity.id}`}
-            className="group block bg-white rounded-lg border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
-          >
-            <div className="aspect-[4/3] bg-slate-100 relative">
-               {entity.image_uuid && entity.image_ext ? (
-                 <img 
-                   src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
-                   alt={entity.name} 
-                   className="w-full h-full object-cover"
-                   loading="lazy"
-                   style={{
-                      objectPosition: `${entity.focal_x || 50}% ${entity.focal_y || 50}%`
-                   }}
-                 />
-               ) : (
-                 <div className="w-full h-full flex items-center justify-center text-slate-300 font-bold text-2xl">
-                   {entity.name.substring(0,2).toUpperCase()}
-                 </div>
-               )}
-            </div>
-            
-            <div className="p-3 border-t border-slate-100">
-              <p className="text-sm font-semibold text-slate-800 truncate" title={entity.name}>
-                {entity.name}
-              </p>
-              <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">
-                {entity.type}
-              </p>
-            </div>
-          </Link>
-        ))}
+        {entities.map((entity) => {
+          // --- CALCULATE INACTIVE STATE ---
+          const isInactive = 
+            (entity.type === 'Character' && entity.character?.is_dead) ||
+            (entity.type === 'Location' && entity.location?.is_destroyed) ||
+            (entity.type === 'Organisation' && entity.organisation?.is_defunct) ||
+            (entity.type === 'Family' && entity.family?.is_extinct) ||
+            (entity.type === 'Race' && entity.race?.is_extinct);
+
+          return (
+            <Link 
+              key={entity.id} 
+              href={`/entity/${entity.id}`}
+              className="group block bg-white rounded-lg border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="aspect-[4/3] bg-slate-100 relative">
+                 {entity.image_uuid && entity.image_ext ? (
+                   <img 
+                     src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
+                     alt={entity.name} 
+                     // --- APPLY GRAYSCALE IF INACTIVE ---
+                     className={`w-full h-full object-cover loading="lazy" ${isInactive ? 'grayscale' : ''}`}
+                     style={{
+                        objectPosition: `${entity.focal_x || 50}% ${entity.focal_y || 50}%`
+                     }}
+                   />
+                 ) : (
+                   <div className="w-full h-full flex items-center justify-center text-slate-300 font-bold text-2xl">
+                     {entity.name.substring(0,2).toUpperCase()}
+                   </div>
+                 )}
+              </div>
+              
+              <div className="p-3 border-t border-slate-100">
+                <p className="text-sm font-semibold text-slate-800 truncate" title={entity.name}>
+                  {entity.name}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">
+                  {entity.type}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
       </div>
       
       {/* PAGINATION CONTROLS */}

@@ -30,7 +30,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
   const isLoggedIn = cookieStore.has('lore_session');
 
   // 2. FETCH ENTITY WITH OPTIMIZED RELATIONS
-  // We strictly select only the fields we need for display to reduce payload size.
   const simpleEntitySelect = {
     id: true,
     name: true,
@@ -71,7 +70,10 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           members: {
             include: { 
               character: {
-                include: { entity: { select: simpleEntitySelect } } 
+                // Fetch is_dead so we can grey out the dead ones
+                include: { 
+                  entity: { select: simpleEntitySelect } 
+                } 
               } 
             }
           }
@@ -82,7 +84,10 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           members: {
             include: {
               character: {
-                include: { entity: { select: simpleEntitySelect } }
+                // Fetch is_dead here too
+                include: { 
+                  entity: { select: simpleEntitySelect } 
+                }
               }
             }
           }
@@ -135,7 +140,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
     ]);
   }
 
-  // 4. HELPER: EXTRACT NAMES
   const getJoinedNames = (list: any[], key: string) => {
     if (!list || !Array.isArray(list)) return null;
     return list
@@ -252,19 +256,23 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                    {members.map((m: any) => {
                      const char = m.character?.entity;
                      if (!char) return null;
+                     
+                     // CHECK IF DEAD
+                     const isDead = m.character?.is_dead;
+
                      return (
                        <Link 
                          key={m.id} 
                          href={`/entity/${char.id}`}
                          className="group block bg-white rounded-lg border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
                        >
-                         {/* IMAGE (Square) */}
                          <div className="aspect-square bg-slate-100 relative">
                             {char.image_uuid ? (
                               <img 
                                 src={`/gallery/${char.image_uuid}.${char.image_ext}`} 
                                 alt={char.name} 
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                // --- APPLY GRAYSCALE ---
+                                className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${isDead ? 'grayscale' : ''}`}
                                 style={{
                                   objectPosition: `${char.focal_x || 50}% ${char.focal_y || 50}%`
                                 }}
@@ -276,7 +284,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                             )}
                          </div>
                          
-                         {/* TEXT FOOTER */}
                          <div className="p-2 border-t border-slate-100">
                            <p className="text-xs font-bold text-slate-800 truncate group-hover:text-blue-600">
                              {char.name}
