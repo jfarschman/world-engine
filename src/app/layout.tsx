@@ -4,6 +4,7 @@ import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import SidebarShell from '@/components/SidebarShell';
 import Footer from '@/components/Footer';
+import HitCounter from '@/components/HitCounter'; // <--- IMPORT
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,14 +29,12 @@ export default function RootLayout({
           </SidebarShell>
 
           {/* MAIN CONTENT AREA */}
-          {/* md:ml-0 -> Because the sidebar is now 'static' in flex row on desktop, we don't need margin-left. 
-              The flex container handles it. */}
-          {/* pt-20 -> Adds padding on mobile so content isn't hidden behind the top bar */}
           <main className="flex-1 p-4 pt-20 md:p-8 md:pt-8 overflow-x-hidden">
             {children}
           </main>
         </div>
         <Footer />
+        <HitCounter /> {/* <--- ADDED HERE */}
       </body>
     </html>
   );

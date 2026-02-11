@@ -1,11 +1,21 @@
 generator client {
   provider = "prisma-client-js"
-  //output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// --- NEW MODEL: WORLD ---
+model World {
+  id                Int      @id @default(autoincrement())
+  name              String
+  slug              String   @unique // e.g. "lsoc", "drakkenheim", "rhod"
+  domain            String?  @unique // e.g. "lsoc.hitechsavvy.com"
+  kanka_campaign_id Int?     @unique // Used by ingest script to route data
+  
+  entities          Entity[]
 }
 
 model Entity {
@@ -15,13 +25,19 @@ model Entity {
   entry        String?       @db.Text
   image_uuid   String?
   image_ext    String?
-  focal_x      Int?          @default(50) // set focal point
+  focal_x      Int?          @default(50)
   focal_y      Int?          @default(50)
   is_private   Boolean       @default(false)
   is_featured  Boolean       @default(false)
   parentId     Int?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  
+  // --- NEW RELATION ---
+  worldId      Int?          // Optional for now to prevent breaking existing data on push
+  world        World?        @relation(fields: [worldId], references: [id])
+  
+  // Existing Relations
   character    Character?
   parent       Entity?       @relation("EntityNesting", fields: [parentId], references: [id])
   children     Entity[]      @relation("EntityNesting")
@@ -37,10 +53,24 @@ model Entity {
   relationshipsIn  Relationship[] @relation("RelTarget")
   organisation Organisation?
   race         Race?
+
   @@index([type])
   @@index([name])
+  @@index([worldId]) 
 }
 
+// ... (KEEP ALL YOUR EXISTING MODELS BELOW: Character, Location, etc.) ...
+// ... (I'm not listing them to save space, but DO NOT DELETE THEM) ...
+
+// --- STATS MODEL (From previous task) ---
+model SiteStats {
+  id    Int @id @default(1)
+  views Int @default(0)
+}
+
+// ---------------------------------------------------------
+// PASTE THE REST OF YOUR MODELS HERE (Character, Post, etc)
+// ---------------------------------------------------------
 model Character {
   entityId      Int                  @id
   age           String?
@@ -71,7 +101,7 @@ model Item {
 
 model Note {
   entityId Int    @id
-  type     String? // Kanka sometimes has subtypes for notes
+  type     String?
   entity   Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
 }
 
@@ -118,8 +148,8 @@ model Relationship {
   id        Int      @id @default(autoincrement())
   sourceId  Int
   targetId  Int
-  type      String   // e.g., "Rival", "Mentor", "Sibling"
-  attitude  Int?     // Kanka exports this sometimes (range -100 to 100)
+  type      String   
+  attitude  Int?
   source    Entity   @relation("RelSource", fields: [sourceId], references: [id])
   target    Entity   @relation("RelTarget", fields: [targetId], references: [id])
   @@index([sourceId])
