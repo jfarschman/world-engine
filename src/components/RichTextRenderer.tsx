@@ -11,14 +11,23 @@ export default function RichTextRenderer({ content }: RichTextRendererProps) {
   if (!content) return null;
 
   // 1. Pre-process the string to fix legacy [shortcodes]
-  // This turns [character:123|Name] into <a href="/entity/123">Name</a>
   const cleanedContent = resolveKankaMentions(content);
 
   // 2. Parse the HTML into React Components
   return parse(cleanedContent, {
     replace: (domNode) => {
       
-      // CASE A: Standard Links (<a>) & Legacy Shortcodes (which became <a> above)
+      // CASE A: Force Paragraph Spacing
+      if (domNode.type === 'tag' && domNode.name === 'p') {
+        return (
+          <p className="mb-4">
+            {/* @ts-ignore */}
+            {domToReact(domNode.children)}
+          </p>
+        );
+      }
+
+      // CASE B: Standard Links (<a>) & Legacy Shortcodes
       if (domNode.type === 'tag' && domNode.name === 'a') {
         const href = domNode.attribs.href;
         const title = domNode.attribs.title;
@@ -37,6 +46,7 @@ export default function RichTextRenderer({ content }: RichTextRendererProps) {
            if (hrefMatch) entityId = parseInt(hrefMatch[1]);
         }
 
+        // If it's an internal Entity Link
         if (entityId) {
           return (
             <EntityLink id={entityId} name={title || 'Entity'}>
@@ -45,10 +55,11 @@ export default function RichTextRenderer({ content }: RichTextRendererProps) {
             </EntityLink>
           );
         }
+        
+        // If it's a generic external link, let it render naturally but you can add styles here if needed
       }
 
-      // CASE B: Tiptap Mentions (<span data-type="mention">)
-      // This strips the styling and the '@' symbol for read-only views
+      // CASE C: Tiptap Mentions (<span data-type="mention">)
       if (
         domNode.type === 'tag' && 
         domNode.name === 'span' && 

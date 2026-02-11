@@ -4,7 +4,7 @@ import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Mention from '@tiptap/extension-mention';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
 import MentionList from './MentionList';
@@ -57,7 +57,6 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
           return `${node.attrs.label ?? node.attrs.id}`;
         },
         suggestion: {
-          // This command determines what happens when you press Enter on a name
           command: ({ editor, range, props }) => {
             editor
               .chain()
@@ -65,12 +64,9 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
               .insertContentAt(range, [
                 {
                   type: 'mention',
-                  attrs: props, // props contains { id, label }
+                  attrs: props,
                 },
-                {
-                  type: 'text',
-                  text: ' ', // Adds a space after the mention
-                },
+                // --- REMOVED THE EXTRA SPACE BLOCK HERE ---
               ])
               .run();
           },
@@ -143,6 +139,20 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
     }
   }, [content, editor]);
 
+  // Helper for adding links
+  const setLink = useCallback(() => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('URL', previousUrl);
+
+    if (url === null) return; // cancelled
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  }, [editor]);
+
   if (!editor) {
     return null;
   }
@@ -170,6 +180,14 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
           S
         </ToolbarButton>
         
+        {/* NEW LINK BUTTON */}
+        <ToolbarButton
+          onClick={setLink}
+          isActive={editor.isActive('link')}
+        >
+          Link
+        </ToolbarButton>
+
         <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
 
         <ToolbarButton
