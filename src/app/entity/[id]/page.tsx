@@ -91,14 +91,14 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       note: true,
       posts: {
         where: isLoggedIn ? undefined : { is_private: false },
-        orderBy: { createdAt: 'desc' },
-        // --- PERFORMANCE FIX: SELECT ONLY METADATA ---
+        // --- SORT BY ID (DESCENDING) ---
+        // This ensures consistent ordering even if import timestamps are identical.
+        orderBy: { id: 'desc' }, 
         select: {
           id: true,
           name: true,
           is_private: true,
           createdAt: true,
-          // 'entry' is EXCLUDED. It will be fetched by JournalSession only when clicked.
         }
       }
     }
