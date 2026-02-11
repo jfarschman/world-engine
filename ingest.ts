@@ -1,13 +1,32 @@
-import { PrismaClient } from './src/generated/prisma/index.js';
+import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
 const prisma = new PrismaClient();
 const idMap = new Map<number, number>(); 
+const campaignWorldMap = new Map<number, number>(); // Cache for World IDs
+
+// Helper to find World ID from Kanka Campaign ID
+async function getWorldId(kankaId: number): Promise<number> {
+  if (!kankaId) return 1; // Default to Little Shoppe if missing
+  if (campaignWorldMap.has(kankaId)) return campaignWorldMap.get(kankaId)!;
+
+  const world = await prisma.world.findUnique({
+    where: { kanka_campaign_id: kankaId }
+  });
+
+  if (world) {
+    campaignWorldMap.set(kankaId, world.id);
+    return world.id;
+  } else {
+    console.warn(`⚠️  Warning: Unknown Campaign ID ${kankaId}. Defaulting to World 1.`);
+    campaignWorldMap.set(kankaId, 1);
+    return 1;
+  }
+}
 
 async function processEntities(folderName: string, type: string, pass: number) {
   const dirPath = path.join('./kanka-backup', folderName);
-  // Fail gracefully if folder doesn't exist (e.g., if you have no families)
   if (!fs.existsSync(dirPath)) return;
 
   const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.json'));
@@ -16,41 +35,44 @@ async function processEntities(folderName: string, type: string, pass: number) {
   for (const file of files) {
     const data = JSON.parse(fs.readFileSync(path.join(dirPath, file), 'utf8'));
     const { entity } = data;
+    
+    // --- DETERMINE WORLD ID ---
+    // We look at the top-level campaign_id in the JSON
+    const worldId = await getWorldId(data.campaign_id);
+
     idMap.set(data.id, entity.id);
 
     try {
-      // --- PASS 1: CORE DATA, POSTS, & IMAGE EXTENSIONS ---
+      // --- PASS 1: CORE DATA, POSTS, IMAGE EXTENSIONS, & WORLD ID ---
       if (pass === 1) {
         let detectedExt = null;
         if (entity.image_uuid) {
-          // Resolve absolute path to find the metadata JSON
           const galleryDir = path.resolve(process.cwd(), 'public', 'gallery');
           const imageJsonPath = path.join(galleryDir, `${entity.image_uuid}.json`);
 
           if (fs.existsSync(imageJsonPath)) {
             const imageJson = JSON.parse(fs.readFileSync(imageJsonPath, 'utf8'));
             detectedExt = imageJson.ext;
-            // console.log(`   ✅ Image metadata found for ${entity.name}: ${detectedExt}`);
           }
         }
-
-        // console.log(`Creating Entity: ${entity.name} (${type})`);
 
         await prisma.entity.upsert({
           where: { id: entity.id },
           update: { 
             name: entity.name, 
             entry: entity.entry, 
-            image_ext: detectedExt 
+            image_ext: detectedExt,
+            worldId: worldId // <--- UPDATE EXISTING TO CORRECT WORLD
           }, 
           create: {
             id: entity.id,
             name: entity.name,
-            type: type, // Uses the type we passed in (e.g. "Note")
+            type: type, 
             entry: entity.entry,
             is_private: entity.is_private === 1 || data.is_private === 1,
             image_uuid: entity.image_uuid,
             image_ext: detectedExt,
+            worldId: worldId // <--- SET WORLD ID ON CREATE
           }
         });
 
@@ -109,7 +131,6 @@ async function processEntities(folderName: string, type: string, pass: number) {
             create: { entityId: entity.id, is_defunct: data.is_defunct === 1 }
           });
         } else if (type === 'Note') {
-          // NEW: Handle Notes
           await prisma.note.upsert({
             where: { entityId: entity.id },
             update: {},
@@ -178,7 +199,7 @@ async function main() {
     { name: 'organisations', type: 'Organisation' },
     { name: 'journals', type: 'Journal' },
     { name: 'characters', type: 'Character' },
-    { name: 'notes', type: 'Note' } // <--- Added this line
+    { name: 'notes', type: 'Note' }
   ];
 
   for (let p of [1, 2, 3]) {

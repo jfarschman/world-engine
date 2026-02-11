@@ -1,83 +1,86 @@
-import { PrismaClient } from './src/generated/prisma/index.js';
+import { PrismaClient } from '@prisma/client'; // Updated for standard node_modules
 
-// 1. Immediate feedback to prove the script loaded
-console.log("🚀 Link Fixer Starting...");
+console.log("🚀 World-Aware Link Fixer Starting...");
 
 const prisma = new PrismaClient();
-
-// REGEX: Captures [type:id] and [type:id|Label]
-// Handles mixed brackets like [[type:id]] gracefully
 const TAG_REGEX = /(?:\[\[|\[)\s*(\w+):(\d+)(?:\|([^\]]+))?(?:\]\]|\])/g;
 
-async function enrichModel(modelName: 'entity' | 'post') {
-  console.log(`\n🔍 Scanning ${modelName} table...`);
-  
-  // @ts-ignore - Dynamic model access
-  const records = await prisma[modelName].findMany({
-    select: { id: true, entry: true }
-  });
+async function enrichWorldLinks(worldId: number, worldName: string) {
+  console.log(`\n🌍 Processing World: ${worldName} (ID: ${worldId})`);
 
-  console.log(`   Found ${records.length} records. Fetching entity names...`);
-
-  // Pre-fetch ALL names to specific map for O(1) lookup
-  const allEntities = await prisma.entity.findMany({
+  // 1. Fetch only Entities for THIS world
+  const worldEntities = await prisma.entity.findMany({
+    where: { worldId },
     select: { id: true, name: true }
   });
-  const nameMap = new Map(allEntities.map(e => [e.id, e.name]));
+  const nameMap = new Map(worldEntities.map(e => [e.id, e.name]));
 
-  let updateCount = 0;
+  // 2. Process Entities in this world
+  const entities = await prisma.entity.findMany({
+    where: { worldId },
+    select: { id: true, entry: true, name: true }
+  });
 
-  for (const r of records) {
+  let entityUpdateCount = 0;
+  for (const r of entities) {
     if (!r.entry) continue;
-
-    let isDirty = false;
-    
-    // Replace tags with their "Enriched" version
-    const newEntry = r.entry.replace(TAG_REGEX, (match: string, type: string, idStr: string, existingLabel: string | undefined) => {
-      const id = parseInt(idStr);
-      
-      // Case A: Tag already has a label (e.g. [character:123|Calliope])
-      // We keep it, just ensuring brackets are clean
-      if (existingLabel) {
-        const normalized = `[${type}:${id}|${existingLabel}]`;
-        if (match !== normalized) isDirty = true;
-        return normalized;
-      }
-
-      // Case B: Tag has NO label (e.g. [character:123])
-      // We look up the name in our DB
-      const dbName = nameMap.get(id);
-      if (dbName) {
-        // Found it! Add the name to the tag
-        const enriched = `[${type}:${id}|${dbName}]`;
-        isDirty = true; 
-        return enriched;
-      }
-
-      // Case C: ID not found in DB (Broken Link)
-      // Leave it as-is so we can spot it later
-      return `[${type}:${id}]`;
-    });
-
+    const { newEntry, isDirty } = processText(r.entry, nameMap);
     if (isDirty) {
-      // @ts-ignore
-      await prisma[modelName].update({
-        where: { id: r.id },
-        data: { entry: newEntry }
-      });
-      updateCount++;
-      // Show progress every 50 updates
-      if (updateCount % 50 === 0) process.stdout.write('.');
+      await prisma.entity.update({ where: { id: r.id }, data: { entry: newEntry } });
+      entityUpdateCount++;
     }
   }
-  console.log(`\n✅ Fixed ${updateCount} links in ${modelName}.`);
+
+  // 3. Process Posts (Journals) in this world
+  const posts = await prisma.post.findMany({
+    where: { entity: { worldId } },
+    select: { id: true, entry: true, name: true }
+  });
+
+  let postUpdateCount = 0;
+  for (const p of posts) {
+    if (!p.entry) continue;
+    const { newEntry, isDirty } = processText(p.entry, nameMap);
+    if (isDirty) {
+      await prisma.post.update({ where: { id: p.id }, data: { entry: newEntry } });
+      postUpdateCount++;
+    }
+  }
+
+  console.log(`   ✅ Updated ${entityUpdateCount} Entities and ${postUpdateCount} Posts.`);
+}
+
+// Helper to handle the Regex logic
+function processText(entry: string, nameMap: Map<number, string>) {
+  let isDirty = false;
+  const newEntry = entry.replace(TAG_REGEX, (match, type, idStr, existingLabel) => {
+    const id = parseInt(idStr);
+    
+    if (existingLabel) {
+      const normalized = `[${type}:${id}|${existingLabel}]`;
+      if (match !== normalized) isDirty = true;
+      return normalized;
+    }
+
+    const dbName = nameMap.get(id);
+    if (dbName) {
+      isDirty = true; 
+      return `[${type}:${id}|${dbName}]`;
+    }
+
+    return `[${type}:${id}]`;
+  });
+
+  return { newEntry, isDirty };
 }
 
 async function main() {
   try {
-    await enrichModel('entity');
-    await enrichModel('post'); // Fixes the Journal Entries
-    console.log("\n✨ Database links fully synchronized.");
+    const worlds = await prisma.world.findMany();
+    for (const world of worlds) {
+      await enrichWorldLinks(world.id, world.name);
+    }
+    console.log("\n✨ All worlds synchronized and linked.");
   } catch (e) {
     console.error("\n❌ Script Error:", e);
   } finally {
@@ -85,5 +88,4 @@ async function main() {
   }
 }
 
-// Execute
 main();

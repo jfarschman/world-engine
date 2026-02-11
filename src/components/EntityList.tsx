@@ -17,6 +17,8 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
   // 1. GET WORLD CONTEXT
   const world = await getCurrentWorld(); // <--- GET WORLD ID
 
+  console.log(`DEBUG: Fetching ${type} for World: ${world.name} (ID: ${world.id})`);
+
   // LOGIN CHECK
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
