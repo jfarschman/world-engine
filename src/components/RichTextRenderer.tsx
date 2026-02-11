@@ -18,9 +18,10 @@ export default function RichTextRenderer({ content }: RichTextRendererProps) {
     replace: (domNode) => {
       
       // CASE A: Force Paragraph Spacing
+      // This ensures that hitting "Enter" creates visual space.
       if (domNode.type === 'tag' && domNode.name === 'p') {
         return (
-          <p className="mb-4">
+          <p className="mb-4 min-h-[1.5rem]">
             {/* @ts-ignore */}
             {domToReact(domNode.children)}
           </p>
@@ -56,7 +57,7 @@ export default function RichTextRenderer({ content }: RichTextRendererProps) {
           );
         }
         
-        // If it's a generic external link, let it render naturally but you can add styles here if needed
+        // External links render normally
       }
 
       // CASE C: Tiptap Mentions (<span data-type="mention">)
