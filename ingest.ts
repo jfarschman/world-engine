@@ -4,11 +4,10 @@ import path from 'path';
 
 const prisma = new PrismaClient();
 const idMap = new Map<number, number>(); 
-const campaignWorldMap = new Map<number, number>(); // Cache for World IDs
+const campaignWorldMap = new Map<number, number>(); 
 
-// Helper to find World ID from Kanka Campaign ID
 async function getWorldId(kankaId: number): Promise<number> {
-  if (!kankaId) return 1; // Default to Little Shoppe if missing
+  if (!kankaId) return 1;
   if (campaignWorldMap.has(kankaId)) return campaignWorldMap.get(kankaId)!;
 
   const world = await prisma.world.findUnique({
@@ -35,20 +34,31 @@ async function processEntities(folderName: string, type: string, pass: number) {
   for (const file of files) {
     const data = JSON.parse(fs.readFileSync(path.join(dirPath, file), 'utf8'));
     const { entity } = data;
-    
-    // --- DETERMINE WORLD ID ---
-    // We look at the top-level campaign_id in the JSON
     const worldId = await getWorldId(data.campaign_id);
 
+    // Track original ID mapping for relationships
     idMap.set(data.id, entity.id);
 
     try {
-      // --- PASS 1: CORE DATA, POSTS, IMAGE EXTENSIONS, & WORLD ID ---
       if (pass === 1) {
+        let imageUuid = entity.image_uuid;
         let detectedExt = null;
-        if (entity.image_uuid) {
+
+        // --- IMPROVED IMAGE HANDLING ---
+        // If UUID is missing but path exists (Legacy RHoD style)
+        if (!imageUuid && entity.image_path) {
+          const pathParts = entity.image_path.split('/');
+          const filenameWithExt = pathParts[pathParts.length - 1];
+          const filenameParts = filenameWithExt.split('.');
+          
+          imageUuid = filenameParts[0]; // Extract ID from filename
+          detectedExt = filenameParts[1]; // Extract extension from filename
+        } 
+
+        // If we have a UUID but still need an extension (Newer Kanka style)
+        if (imageUuid && !detectedExt) {
           const galleryDir = path.resolve(process.cwd(), 'public', 'gallery');
-          const imageJsonPath = path.join(galleryDir, `${entity.image_uuid}.json`);
+          const imageJsonPath = path.join(galleryDir, `${imageUuid}.json`);
 
           if (fs.existsSync(imageJsonPath)) {
             const imageJson = JSON.parse(fs.readFileSync(imageJsonPath, 'utf8'));
@@ -56,13 +66,18 @@ async function processEntities(folderName: string, type: string, pass: number) {
           }
         }
 
+        // --- DECOUPLED UPSERT ---
+        // We look for the ID. If it exists but belongs to a DIFFERENT world, 
+        // the original PK logic would overwrite it. 
+        // Note: This still uses entity.id as PK, but ensures worldId is synced.
         await prisma.entity.upsert({
           where: { id: entity.id },
           update: { 
             name: entity.name, 
             entry: entity.entry, 
+            image_uuid: imageUuid,
             image_ext: detectedExt,
-            worldId: worldId // <--- UPDATE EXISTING TO CORRECT WORLD
+            worldId: worldId 
           }, 
           create: {
             id: entity.id,
@@ -70,13 +85,13 @@ async function processEntities(folderName: string, type: string, pass: number) {
             type: type, 
             entry: entity.entry,
             is_private: entity.is_private === 1 || data.is_private === 1,
-            image_uuid: entity.image_uuid,
+            image_uuid: imageUuid,
             image_ext: detectedExt,
-            worldId: worldId // <--- SET WORLD ID ON CREATE
+            worldId: worldId 
           }
         });
 
-        // Universal Posts (Logs/Backstories)
+        // Universal Posts
         if (entity.posts && Array.isArray(entity.posts)) {
           for (const p of entity.posts) {
             await prisma.post.upsert({
@@ -97,52 +112,48 @@ async function processEntities(folderName: string, type: string, pass: number) {
         if (type === 'Character') {
           await prisma.character.upsert({
             where: { entityId: entity.id },
-            update: {},
-            create: { entityId: entity.id, age: data.age, sex: data.sex, title: data.title, is_dead: data.is_dead === 1 }
+            update: { age: data.age?.toString(), sex: data.sex, title: data.title, is_dead: data.is_dead === 1 },
+            create: { entityId: entity.id, age: data.age?.toString(), sex: data.sex, title: data.title, is_dead: data.is_dead === 1 }
           });
         } else if (type === 'Journal') {
           await prisma.journal.upsert({
             where: { entityId: entity.id },
-            update: {},
+            update: { date: data.date ? new Date(data.date) : null },
             create: { entityId: entity.id, date: data.date ? new Date(data.date) : null }
           });
         } else if (type === 'Location') {
           await prisma.location.upsert({
             where: { entityId: entity.id },
-            update: {},
+            update: { is_destroyed: data.is_destroyed === 1 },
             create: { entityId: entity.id, is_destroyed: data.is_destroyed === 1 }
           });
         } else if (type === 'Race') {
           await prisma.race.upsert({
             where: { entityId: entity.id },
-            update: {},
+            update: { is_extinct: data.is_extinct === 1 },
             create: { entityId: entity.id, is_extinct: data.is_extinct === 1 }
           });
         } else if (type === 'Family') {
           await prisma.family.upsert({
             where: { entityId: entity.id },
-            update: {},
+            update: { is_extinct: data.is_extinct === 1 },
             create: { entityId: entity.id, is_extinct: data.is_extinct === 1 }
           });
         } else if (type === 'Organisation') {
           await prisma.organisation.upsert({
             where: { entityId: entity.id },
-            update: {},
+            update: { is_defunct: data.is_defunct === 1 },
             create: { entityId: entity.id, is_defunct: data.is_defunct === 1 }
           });
         } else if (type === 'Note') {
           await prisma.note.upsert({
             where: { entityId: entity.id },
-            update: {},
-            create: { 
-                entityId: entity.id, 
-                type: data.type || "General" 
-            }
+            update: { type: data.type || "General" },
+            create: { entityId: entity.id, type: data.type || "General" }
           });
         }
       } 
       
-      // --- PASS 2: HIERARCHY ---
       else if (pass === 2) {
         if (entity.parentId) {
           await prisma.entity.update({
@@ -152,7 +163,6 @@ async function processEntities(folderName: string, type: string, pass: number) {
         }
       }
 
-      // --- PASS 3: RELATIONSHIPS ---
       else if (pass === 3) {
         if (type === 'Character' && data.character_races) {
           for (const r of data.character_races) {
