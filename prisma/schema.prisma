@@ -34,7 +34,7 @@ model Entity {
   updatedAt    DateTime      @updatedAt
   
   // --- NEW RELATION ---
-  worldId      Int?          // Optional for now to prevent breaking existing data on push
+  worldId      Int?          // Optional for now so the push doesn't fail
   world        World?        @relation(fields: [worldId], references: [id])
   
   // Existing Relations
@@ -59,17 +59,14 @@ model Entity {
   @@index([worldId]) 
 }
 
-// ... (KEEP ALL YOUR EXISTING MODELS BELOW: Character, Location, etc.) ...
-// ... (I'm not listing them to save space, but DO NOT DELETE THEM) ...
-
-// --- STATS MODEL (From previous task) ---
+// --- STATS MODEL ---
 model SiteStats {
   id    Int @id @default(1)
   views Int @default(0)
 }
 
 // ---------------------------------------------------------
-// PASTE THE REST OF YOUR MODELS HERE (Character, Post, etc)
+// EXISTING MODELS
 // ---------------------------------------------------------
 model Character {
   entityId      Int                  @id
