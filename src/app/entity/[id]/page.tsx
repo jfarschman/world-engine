@@ -10,6 +10,7 @@ import { deleteEntity, deletePost } from '@/app/actions';
 import FeatureButton from '@/components/FeatureButton';
 import EntityEditableBlock from '@/components/EntityEditableBlock';
 import EditButton from '@/components/EditButton';
+import { getCurrentWorld } from '@/lib/get-current-world'; // <--- IMPORT
 
 export const dynamic = 'force-dynamic';
 
@@ -25,22 +26,18 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
 
   if (isNaN(id)) return notFound();
 
-  // 1. CHECK LOGIN STATUS
+  // 1. GET WORLD CONTEXT
+  const world = await getCurrentWorld(); // <--- GET WORLD
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
 
-  // 2. FETCH ENTITY WITH OPTIMIZED RELATIONS
-  const simpleEntitySelect = {
-    id: true,
-    name: true,
-    image_uuid: true,
-    image_ext: true,
-    focal_x: true,
-    focal_y: true,
-  };
-
-  const entity = await prisma.entity.findUnique({
-    where: { id },
+  // 2. FETCH ENTITY (SCOPED TO WORLD)
+  // We use findFirst instead of findUnique so we can filter by worldId
+  const entity = await prisma.entity.findFirst({
+    where: { 
+      id,
+      worldId: world.id // <--- SECURITY FILTER
+    },
     include: {
       parent: { select: { id: true, name: true } },
       character: { 
@@ -70,7 +67,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           members: {
             include: { 
               character: {
-                include: { entity: { select: simpleEntitySelect } } 
+                include: { entity: { select: { id: true, name: true, image_uuid: true, image_ext: true, focal_x: true, focal_y: true } } } 
               } 
             }
           }
@@ -81,7 +78,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
           members: {
             include: {
               character: {
-                include: { entity: { select: simpleEntitySelect } }
+                include: { entity: { select: { id: true, name: true, image_uuid: true, image_ext: true, focal_x: true, focal_y: true } } }
               }
             }
           }
@@ -91,8 +88,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
       note: true,
       posts: {
         where: isLoggedIn ? undefined : { is_private: false },
-        // --- SORT BY ID (DESCENDING) ---
-        // This ensures consistent ordering even if import timestamps are identical.
         orderBy: { id: 'desc' }, 
         select: {
           id: true,
@@ -111,7 +106,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
     return notFound();
   }
 
-  // 3. FETCH LISTS FOR EDIT DROPDOWNS (Only for DM)
+  // 3. FETCH DROPDOWN LISTS (SCOPED TO WORLD)
   let locations: { id: number; name: string }[] = [];
   let races: { id: number; name: string }[] = [];
   let families: { id: number; name: string }[] = [];
@@ -120,28 +115,32 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
   if (isLoggedIn) {
     [locations, races, families, orgs] = await Promise.all([
       prisma.entity.findMany({ 
-        where: { type: 'Location' }, 
+        where: { type: 'Location', worldId: world.id }, // <--- FILTER
         orderBy: { name: 'asc' }, 
         select: { id: true, name: true } 
       }),
       prisma.entity.findMany({ 
-        where: { type: 'Race' }, 
+        where: { type: 'Race', worldId: world.id }, // <--- FILTER
         orderBy: { name: 'asc' }, 
         select: { id: true, name: true } 
       }),
       prisma.entity.findMany({ 
-        where: { type: 'Family' }, 
+        where: { type: 'Family', worldId: world.id }, // <--- FILTER
         orderBy: { name: 'asc' }, 
         select: { id: true, name: true } 
       }),
       prisma.entity.findMany({ 
-        where: { type: 'Organisation' }, 
+        where: { type: 'Organisation', worldId: world.id }, // <--- FILTER
         orderBy: { name: 'asc' }, 
         select: { id: true, name: true } 
       }),
     ]);
   }
 
+  // ... (The rest of your JSX remains exactly the same) ...
+  // To save space, I am not pasting the JSX again unless you need it.
+  // Just ensure the props passed to EntityEditableBlock are the ones derived above.
+  
   const getJoinedNames = (list: any[], key: string) => {
     if (!list || !Array.isArray(list)) return null;
     return list
@@ -198,7 +197,6 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
     }
   };
 
-  // --- MEMBER LIST LOGIC ---
   const members = entity.type === 'Organisation' 
     ? entity.organisation?.members 
     : entity.type === 'Family' 

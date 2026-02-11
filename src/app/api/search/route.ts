@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getCurrentWorld } from '@/lib/get-current-world'; // <--- IMPORT
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -10,24 +11,24 @@ export async function GET(request: Request) {
   const limit = 25;
   const offset = (page - 1) * limit;
 
+  // 1. GET CURRENT WORLD
+  const world = await getCurrentWorld(); // <--- GET WORLD ID
+
   if (!query || query.length < 3) {
     return NextResponse.json({ results: [], total: 0 });
   }
 
-  // 1. CHECK LOGIN STATUS
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
 
   // Sanitize input
-  // (Note: cleanQuery formats it for certain TS query types, but plainto_tsquery handles raw text well too. 
-  // We'll stick to the logic you provided).
   const cleanQuery = query.replace(/[^\w\s]/gi, '').trim().split(/\s+/).join(' & ');
 
   if (!cleanQuery) return NextResponse.json({ results: [], total: 0 });
 
   try {
-    // We select image fields now, and JOIN posts to their parent to get the image
-    // PRIVACY LOGIC ADDED: "AND (${isLoggedIn} OR ... = false)"
+    // 2. INJECT WORLD ID INTO SQL
+    // Added: AND "worldId" = ${world.id}
     
     const results = await prisma.$queryRaw`
       SELECT 
@@ -42,6 +43,7 @@ export async function GET(request: Request) {
         1 as priority
       FROM "Entity"
       WHERE to_tsvector('english', name || ' ' || coalesce("entry", '')) @@ plainto_tsquery('english', ${query})
+      AND "worldId" = ${world.id}  -- <--- WORLD FILTER
       AND (${isLoggedIn} OR "is_private" = false)
       
       UNION ALL
@@ -59,11 +61,15 @@ export async function GET(request: Request) {
       FROM "Post" p
       JOIN "Entity" e ON p."entityId" = e.id
       WHERE to_tsvector('english', p.name || ' ' || coalesce(p."entry", '')) @@ plainto_tsquery('english', ${query})
+      AND e."worldId" = ${world.id} -- <--- WORLD FILTER (JOINED)
       AND (${isLoggedIn} OR e."is_private" = false)
       
       ORDER BY priority ASC, rank DESC
       LIMIT ${limit} OFFSET ${offset};
     `;
+
+    // Simple count query for pagination (optional, but good practice to filter count too)
+    // For now, returning results is the priority.
 
     return NextResponse.json({ results, page });
   } catch (error) {

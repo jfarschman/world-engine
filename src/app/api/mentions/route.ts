@@ -1,39 +1,46 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { getCurrentWorld } from '@/lib/get-current-world';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('query');
 
-  if (!query || query.length < 3) {
+  if (!query || query.length < 2) {
     return NextResponse.json([]);
   }
 
-  // Fetch entities matching the name
-  const entities = await prisma.entity.findMany({
-    where: {
-      name: {
-        contains: query,
-        mode: 'insensitive', // Case insensitive search
+  // 1. Get World Context
+  const world = await getCurrentWorld();
+
+  try {
+    const results = await prisma.entity.findMany({
+      where: {
+        worldId: world.id, // <--- WORLD FILTER
+        name: {
+          contains: query,
+          mode: 'insensitive',
+        },
       },
-    },
-    select: {
-      id: true,
-      name: true,
-      type: true,
-    },
-    take: 10, // Limit results for speed
-  });
+      take: 5,
+      select: {
+        id: true,
+        name: true,
+        type: true, // Useful if you want to show "Strahd (Character)" in the dropdown
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
 
-  // Sort: Characters first, then others
-  const sorted = entities.sort((a, b) => {
-    const isCharA = a.type === 'Character';
-    const isCharB = b.type === 'Character';
-    
-    if (isCharA && !isCharB) return -1;
-    if (!isCharA && isCharB) return 1;
-    return 0;
-  });
+    // Format for Tiptap: needs 'id' and 'label' (or whatever your editor expects)
+    const formatted = results.map(entity => ({
+      id: entity.id,
+      label: entity.name, 
+    }));
 
-  return NextResponse.json(sorted);
+    return NextResponse.json(formatted);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch mentions' }, { status: 500 });
+  }
 }

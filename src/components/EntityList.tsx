@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { cookies } from 'next/headers';
+import { getCurrentWorld } from '@/lib/get-current-world'; // <--- IMPORT
 
 interface EntityListProps {
   type: string;
@@ -13,16 +14,21 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
   const pageSize = 25;
   const skip = (page - 1) * pageSize;
   
+  // 1. GET WORLD CONTEXT
+  const world = await getCurrentWorld(); // <--- GET WORLD ID
+
   // LOGIN CHECK
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
 
+  // 2. BUILD FILTER
   const whereClause = {
     type: type,
+    worldId: world.id, // <--- WORLD FILTER
     ...(isLoggedIn ? {} : { is_private: false })
   };
 
-  // 1. Fetch Data with Status Flags
+  // 3. Fetch Data with Status Flags
   const entities = await prisma.entity.findMany({
     where: whereClause,
     select: { 
@@ -45,7 +51,7 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
     skip: skip,
   });
 
-  // 2. Count Total
+  // 4. Count Total (Scoped to World)
   const totalCount = await prisma.entity.count({ where: whereClause });
   const totalPages = Math.ceil(totalCount / pageSize);
   
@@ -58,6 +64,8 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
         <div>
           <h1 className="text-3xl font-bold leading-tight text-slate-900">{title}</h1>
           <p className="mt-2 text-sm text-slate-500">
+            {/* Optional: Show World Name in small text */}
+            <span className="font-semibold text-blue-600 mr-1">{world.name}:</span>
             Showing {skip + 1}-{Math.min(skip + pageSize, totalCount)} of {totalCount}
           </p>
         </div>
@@ -85,7 +93,6 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
                    <img 
                      src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
                      alt={entity.name} 
-                     // --- APPLY GRAYSCALE IF INACTIVE ---
                      className={`w-full h-full object-cover loading="lazy" ${isInactive ? 'grayscale' : ''}`}
                      style={{
                         objectPosition: `${entity.focal_x || 50}% ${entity.focal_y || 50}%`
@@ -152,7 +159,7 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
 
       {entities.length === 0 && (
         <div className="text-center py-12 text-slate-400 italic">
-          No {title.toLowerCase()} found.
+          No {title.toLowerCase()} found in {world.name}.
         </div>
       )}
     </div>

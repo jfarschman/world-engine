@@ -3,29 +3,37 @@ import Link from 'next/link';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import RichTextRenderer from '@/components/RichTextRenderer';
 import { cookies } from 'next/headers';
+import { getCurrentWorld } from '@/lib/get-current-world'; // <--- IMPORT HELPER
 
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
+  
+  // 1. DETERMINE CURRENT WORLD
+  const world = await getCurrentWorld();
 
-  // 1. FEATURED: Hide private entities if logged out
+  // 2. FEATURED: Filter by World ID
   const featuredEntities = await prisma.entity.findMany({
     where: { 
+      worldId: world.id, // <--- WORLD FILTER
       is_featured: true,
-      ...(isLoggedIn ? {} : { is_private: false }) // <--- FILTER ADDED
+      ...(isLoggedIn ? {} : { is_private: false })
     },
     orderBy: { name: 'asc' },
     include: { character: true, location: true, organisation: true }
   });
 
-  // 2. RECENT POSTS: Hide posts that belong to private entities if logged out
+  // 3. RECENT POSTS: Filter by World ID (via Entity relation)
   const recentPosts = await prisma.post.findMany({
     take: 5,
     orderBy: { id: 'desc' }, 
     where: {
-      ...(isLoggedIn ? {} : { entity: { is_private: false } }) // <--- FILTER ADDED
+      entity: {
+        worldId: world.id, // <--- WORLD FILTER
+        ...(isLoggedIn ? {} : { is_private: false })
+      }
     },
     include: { entity: true }
   });
@@ -37,7 +45,9 @@ export default async function Dashboard() {
       <div className="border-b border-slate-200 pb-4">
         <h1 className="text-3xl font-extrabold text-slate-900">Dashboard</h1>
         <p className="mt-2 text-slate-500">
-          {isLoggedIn ? "Welcome back, Dungeon Master." : "Welcome to the Chronicles."}
+          {/* Display the World Name dynamically */}
+          <span className="font-semibold text-blue-600">{world.name}</span>
+          {isLoggedIn ? " — Welcome back, Dungeon Master." : " — Welcome to the Chronicles."}
         </p>
       </div>
 
