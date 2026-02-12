@@ -1,4 +1,4 @@
-import parse, { domToReact, Element } from 'html-react-parser'; // Note: Element import helps TS
+import parse, { domToReact } from 'html-react-parser';
 import EntityLink from '@/components/EntityLink';
 import { resolveKankaMentions } from '@/lib/utils'; 
 
@@ -9,28 +9,24 @@ interface RichTextRendererProps {
 export default function RichTextRenderer({ content }: RichTextRendererProps) {
   if (!content) return null;
 
+  // 1. Pre-process the string to fix legacy [shortcodes]
   const cleanedContent = resolveKankaMentions(content);
 
   return parse(cleanedContent, {
-    replace: (domNode) => {
-      // TS Guard: Ensure we are working with an Element
-      if (!(domNode instanceof Element) && (domNode as any).type !== 'tag') return;
+    replace: (domNode: any) => {
       
-      const node = domNode as Element; // Cast for easier access
-
       // CASE A: Force Paragraph Spacing
-      if (node.name === 'p') {
+      if (domNode.name === 'p') {
         return (
           <p className="mb-4 min-h-[1.5rem]">
-            {domToReact(node.children as any)}
+            {domToReact(domNode.children)}
           </p>
         );
       }
 
-      // CASE B: Standard Links (Legacy Kanka or Manual)
-      if (node.name === 'a') {
-        const href = node.attribs.href;
-        const title = node.attribs.title;
+      // CASE B: Standard Links (<a>)
+      if (domNode.name === 'a') {
+        const { href, title } = domNode.attribs || {};
         let entityId = null;
 
         if (title) {
@@ -45,25 +41,30 @@ export default function RichTextRenderer({ content }: RichTextRendererProps) {
         if (entityId) {
           return (
             <EntityLink id={entityId} name={title || 'Entity'}>
-              {domToReact(node.children as any)}
+              {domToReact(domNode.children)}
             </EntityLink>
           );
         }
       }
 
       // CASE C: The "Green Text" Fix
-      // We explicitly catch the span created by Tiptap
-      if (node.name === 'span' && node.attribs['data-type'] === 'mention') {
-        const id = parseInt(node.attribs['data-id']);
-        const label = node.attribs['data-label'];
+      // We look for EITHER the data-type OR the class that Tiptap adds.
+      if (domNode.name === 'span' && domNode.attribs) {
+        const { class: className, 'data-type': dataType, 'data-id': dataId, 'data-label': dataLabel } = domNode.attribs;
 
-        if (id) {
-          // Wrap it in EntityLink to make it interactive and Blue
-          return (
-            <EntityLink id={id} name={label || 'Entity'}>
-               @{label}
-            </EntityLink>
-          );
+        // Check 1: Is it a Tiptap mention?
+        if (dataType === 'mention' || (className && className.includes('bg-green-100'))) {
+          const id = parseInt(dataId);
+          
+          if (id && !isNaN(id)) {
+            return (
+              <EntityLink id={id} name={dataLabel || 'Entity'}>
+                 <span className="text-blue-700 font-bold hover:underline">
+                   @{dataLabel || 'Entity'}
+                 </span>
+              </EntityLink>
+            );
+          }
         }
       }
     }
