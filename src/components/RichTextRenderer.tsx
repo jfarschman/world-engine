@@ -1,4 +1,4 @@
-import parse, { domToReact } from 'html-react-parser';
+import parse, { domToReact, HTMLReactParserOptions } from 'html-react-parser';
 import EntityLink from '@/components/EntityLink';
 import { resolveKankaMentions } from '@/lib/utils'; 
 
@@ -9,17 +9,18 @@ interface RichTextRendererProps {
 export default function RichTextRenderer({ content }: RichTextRendererProps) {
   if (!content) return null;
 
-  // 1. Pre-process the string to fix legacy [shortcodes]
   const cleanedContent = resolveKankaMentions(content);
 
-  return parse(cleanedContent, {
+  // We define the options separately so we can pass them recursively!
+  const options: HTMLReactParserOptions = {
     replace: (domNode: any) => {
       
-      // CASE A: Force Paragraph Spacing
+      // CASE A: Paragraphs (Fixed to allow recursion)
       if (domNode.name === 'p') {
         return (
           <p className="mb-4 min-h-[1.5rem]">
-            {domToReact(domNode.children)}
+            {/* IMPORTANT: We pass 'options' here so the parser checks the children too! */}
+            {domToReact(domNode.children, options)}
           </p>
         );
       }
@@ -41,26 +42,29 @@ export default function RichTextRenderer({ content }: RichTextRendererProps) {
         if (entityId) {
           return (
             <EntityLink id={entityId} name={title || 'Entity'}>
-              {domToReact(domNode.children)}
+              {/* Recurse here too, just in case */}
+              {domToReact(domNode.children, options)}
             </EntityLink>
           );
         }
       }
-
       // CASE C: The "Green Text" Fix
-      // We look for EITHER the data-type OR the class that Tiptap adds.
-      if (domNode.name === 'span' && domNode.attribs) {
-        const { class: className, 'data-type': dataType, 'data-id': dataId, 'data-label': dataLabel } = domNode.attribs;
+      if (domNode.name === 'span') {
+        const attribs = domNode.attribs || {};
 
-        // Check 1: Is it a Tiptap mention?
-        if (dataType === 'mention' || (className && className.includes('bg-green-100'))) {
-          const id = parseInt(dataId);
-          
+        if (
+          attribs['data-type'] === 'mention' || 
+          (attribs['class'] && attribs['class'].includes('bg-green-100'))
+        ) {
+          const id = parseInt(attribs['data-id']);
+          const label = attribs['data-label'];
+
           if (id && !isNaN(id)) {
             return (
-              <EntityLink id={id} name={dataLabel || 'Entity'}>
-                 <span className="text-blue-700 font-bold hover:underline">
-                   @{dataLabel || 'Entity'}
+              <EntityLink id={id} name={label || 'Entity'}>
+                 {/* REMOVED THE @ SYMBOL BELOW */}
+                 <span className="text-blue-700 font-bold hover:underline cursor-pointer">
+                   {label || 'Entity'}
                  </span>
               </EntityLink>
             );
@@ -68,5 +72,7 @@ export default function RichTextRenderer({ content }: RichTextRendererProps) {
         }
       }
     }
-  });
+  };
+
+  return parse(cleanedContent, options);
 }

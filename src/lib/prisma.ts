@@ -1,11 +1,13 @@
-// 1. Import from YOUR custom location, not the default package
-//import { PrismaClient } from '../generated/prisma';
-import { PrismaClient } from '@prisma/client'; 
+import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+// 1. Prevent multiple instances during development (Hot Module Replacement)
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export const prisma = globalForPrisma.prisma || new PrismaClient();
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ['error'], // Keep logs clean, only show errors
+  });
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
+// 2. Save the instance to global scope so it is reused on reload
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

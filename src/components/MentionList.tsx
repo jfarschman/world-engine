@@ -8,7 +8,8 @@ export default forwardRef((props: any, ref) => {
   const selectItem = (index: number) => {
     const item = props.items[index];
     if (item) {
-      props.command({ id: item.id, label: item.name });
+      // The API returns 'label', so we use that here
+      props.command({ id: item.id, label: item.label });
     }
   };
 
@@ -46,26 +47,32 @@ export default forwardRef((props: any, ref) => {
     },
   }));
 
+  if (!props.items || props.items.length === 0) {
+    return <div className="px-3 py-2 text-xs text-slate-400">No results found</div>;
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden min-w-[200px] flex flex-col p-1">
-      {props.items.length ? (
-        props.items.map((item: any, index: number) => (
-          <button
-            key={item.id}
-            className={`text-left px-3 py-2 text-sm rounded-md flex justify-between items-center ${
-              index === selectedIndex ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
-            }`}
-            onClick={() => selectItem(index)}
-          >
-            <span className="font-medium truncate mr-2">{item.name}</span>
+      {props.items.map((item: any, index: number) => (
+        <button
+          key={item.id}
+          className={`text-left px-3 py-2 text-sm rounded-md flex justify-between items-center w-full ${
+            index === selectedIndex ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
+          }`}
+          onClick={() => selectItem(index)}
+          onMouseEnter={() => setSelectedIndex(index)} // Better UX for mouse users
+        >
+          {/* USE item.label HERE */}
+          <span className="font-medium truncate mr-2">{item.label}</span>
+          
+          {/* Only show type if it exists */}
+          {item.type && (
             <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold text-[10px]">
               {item.type}
             </span>
-          </button>
-        ))
-      ) : (
-        <div className="px-3 py-2 text-xs text-slate-400">No results found</div>
-      )}
+          )}
+        </button>
+      ))}
     </div>
   );
 });
