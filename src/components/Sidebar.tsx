@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { logout } from '@/app/actions';
 import SidebarSearch from './SidebarSearch';
+import { getCurrentWorld } from '@/lib/get-current-world'; // <--- Import Helper
 import { 
   HomeIcon, 
   UserGroupIcon, 
@@ -30,14 +31,18 @@ const navItems = [
 export default async function Sidebar() {
   const cookieStore = await cookies();
   const isLoggedIn = cookieStore.has('lore_session');
+  
+  // 1. Fetch Dynamic World Data
+  const world = await getCurrentWorld();
 
   return (
     <div className="flex h-full w-full flex-col bg-slate-900 text-white overflow-y-auto">
 
-      {/* Brand: Lil (Blue) Shoppe (White) */}
+      {/* Brand: Dynamic Name */}
       <div className="flex h-16 items-center justify-center border-b border-slate-800 bg-slate-950 px-4 shrink-0">
         <h1 className="text-xl font-bold tracking-widest text-blue-400">
-          Lil <span className="text-white">Shoppe</span>
+          {/* Split name for styling (First word blue, rest white) */}
+          {world.name.split(' ')[0]} <span className="text-white">{world.name.split(' ').slice(1).join(' ')}</span>
         </h1>
       </div>
 

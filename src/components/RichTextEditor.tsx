@@ -71,9 +71,18 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
               .run();
           },
           items: async ({ query }) => {
-            if (query.length < 3) return [];
-            const res = await fetch(`/api/mentions?query=${query}`);
-            return await res.json();
+            // 1. Lower threshold to 2 characters to match your API
+            if (query.length < 2) return [];
+            
+            try {
+              const res = await fetch(`/api/mentions?query=${query}`);
+              const json = await res.json();
+              // 2. Safety check: Ensure we return an array
+              return Array.isArray(json) ? json : [];
+            } catch (e) {
+              console.error("Mention fetch failed", e);
+              return [];
+            }
           },
           render: () => {
             let component: ReactRenderer<any>;

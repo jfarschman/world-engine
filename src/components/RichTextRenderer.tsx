@@ -1,5 +1,4 @@
-// src/components/RichTextRenderer.tsx
-import parse, { domToReact } from 'html-react-parser';
+import parse, { domToReact, Element } from 'html-react-parser'; // Note: Element import helps TS
 import EntityLink from '@/components/EntityLink';
 import { resolveKankaMentions } from '@/lib/utils'; 
 
@@ -10,69 +9,59 @@ interface RichTextRendererProps {
 export default function RichTextRenderer({ content }: RichTextRendererProps) {
   if (!content) return null;
 
-  // 1. Pre-process the string to fix legacy [shortcodes]
   const cleanedContent = resolveKankaMentions(content);
 
-  // 2. Parse the HTML into React Components
   return parse(cleanedContent, {
     replace: (domNode) => {
+      // TS Guard: Ensure we are working with an Element
+      if (!(domNode instanceof Element) && (domNode as any).type !== 'tag') return;
       
+      const node = domNode as Element; // Cast for easier access
+
       // CASE A: Force Paragraph Spacing
-      // This ensures that hitting "Enter" creates visual space.
-      if (domNode.type === 'tag' && domNode.name === 'p') {
+      if (node.name === 'p') {
         return (
           <p className="mb-4 min-h-[1.5rem]">
-            {/* @ts-ignore */}
-            {domToReact(domNode.children)}
+            {domToReact(node.children as any)}
           </p>
         );
       }
 
-      // CASE B: Standard Links (<a>) & Legacy Shortcodes
-      if (domNode.type === 'tag' && domNode.name === 'a') {
-        const href = domNode.attribs.href;
-        const title = domNode.attribs.title;
-        
+      // CASE B: Standard Links (Legacy Kanka or Manual)
+      if (node.name === 'a') {
+        const href = node.attribs.href;
+        const title = node.attribs.title;
         let entityId = null;
 
-        // Try to find ID in title "Character #123"
         if (title) {
           const titleMatch = title.match(/[:#](\d+)/); 
           if (titleMatch) entityId = parseInt(titleMatch[1]);
         }
-
-        // Try to find ID in href "/entity/123"
         if (!entityId && href) {
            const hrefMatch = href.match(/entity\/(\d+)/); 
            if (hrefMatch) entityId = parseInt(hrefMatch[1]);
         }
 
-        // If it's an internal Entity Link
         if (entityId) {
           return (
             <EntityLink id={entityId} name={title || 'Entity'}>
-              {/* @ts-ignore */}
-              {domToReact(domNode.children)}
+              {domToReact(node.children as any)}
             </EntityLink>
           );
         }
-        
-        // External links render normally
       }
 
-      // CASE C: Tiptap Mentions (<span data-type="mention">)
-      if (
-        domNode.type === 'tag' && 
-        domNode.name === 'span' && 
-        domNode.attribs['data-type'] === 'mention'
-      ) {
-        const id = parseInt(domNode.attribs['data-id']);
-        const label = domNode.attribs['data-label'];
+      // CASE C: The "Green Text" Fix
+      // We explicitly catch the span created by Tiptap
+      if (node.name === 'span' && node.attribs['data-type'] === 'mention') {
+        const id = parseInt(node.attribs['data-id']);
+        const label = node.attribs['data-label'];
 
         if (id) {
+          // Wrap it in EntityLink to make it interactive and Blue
           return (
             <EntityLink id={id} name={label || 'Entity'}>
-              {label}
+               @{label}
             </EntityLink>
           );
         }

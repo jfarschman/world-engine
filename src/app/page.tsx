@@ -123,7 +123,8 @@ export default async function Dashboard() {
               <div className="flex justify-between items-start">
                  <div>
                    <div className="font-semibold text-slate-900 group-hover:text-blue-600">
-                     {post.name}
+                      {/* RENDER THE TITLE THROUGH THE PARSER */}
+                      <RichTextRenderer content={post.name} />
                    </div>
                    <div className="text-sm text-slate-500 mt-0.5">
                      Attached to <span className="font-medium text-slate-700">{post.entity.name}</span>
