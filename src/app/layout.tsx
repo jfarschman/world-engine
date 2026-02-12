@@ -4,14 +4,23 @@ import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import SidebarShell from '@/components/SidebarShell';
 import Footer from '@/components/Footer';
-import HitCounter from '@/components/HitCounter'; // <--- IMPORT
+import HitCounter from '@/components/HitCounter';
+import { getCurrentWorld } from '@/lib/get-current-world'; // <--- IMPORT
 
 const inter = Inter({ subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: 'LoreDB',
-  description: 'Campaign Manager',
-};
+// REPLACED STATIC METADATA WITH DYNAMIC GENERATION
+export async function generateMetadata(): Promise<Metadata> {
+  const world = await getCurrentWorld();
+  
+  return {
+    title: {
+      template: `%s | ${world.name}`, // "Character Name | Drakkenheim"
+      default: world.name,            // "Drakkenheim" (on homepage)
+    },
+    description: 'Campaign Manager',
+  };
+}
 
 export default function RootLayout({
   children,
@@ -34,7 +43,7 @@ export default function RootLayout({
           </main>
         </div>
         <Footer />
-        <HitCounter /> {/* <--- ADDED HERE */}
+        <HitCounter />
       </body>
     </html>
   );
