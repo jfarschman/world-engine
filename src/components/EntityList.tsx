@@ -1,8 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { cookies } from 'next/headers';
-import { getCurrentWorld } from '@/lib/get-current-world'; // <--- IMPORT
+import { getCurrentWorld } from '@/lib/get-current-world'; 
 
 interface EntityListProps {
   type: string;
@@ -14,20 +13,20 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
   const pageSize = 25;
   const skip = (page - 1) * pageSize;
   
-  // 1. GET WORLD CONTEXT
-  const world = await getCurrentWorld(); // <--- GET WORLD ID
+  // 1. GET WORLD CONTEXT & PERMISSIONS
+  const world = await getCurrentWorld();
+  
+  // Define who can see private content (Everything except GUEST)
+  const canSeePrivate = ['ADMIN', 'DM', 'PLAYER'].includes(world.myRole);
 
-  console.log(`DEBUG: Fetching ${type} for World: ${world.name} (ID: ${world.id})`);
-
-  // LOGIN CHECK
-  const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has('lore_session');
+  console.log(`DEBUG: Fetching ${type} for World: ${world.name} (ID: ${world.id}). Role: ${world.myRole}`);
 
   // 2. BUILD FILTER
   const whereClause = {
     type: type,
-    worldId: world.id, // <--- WORLD FILTER
-    ...(isLoggedIn ? {} : { is_private: false })
+    worldId: world.id, 
+    // If user is GUEST, force is_private: false. Otherwise, show all.
+    ...(canSeePrivate ? {} : { is_private: false })
   };
 
   // 3. Fetch Data with Status Flags
@@ -41,6 +40,7 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
       image_ext: true,
       focal_x: true,
       focal_y: true,
+      is_private: true, // Fetch this to potentially visualize lock icons later
       // --- FETCH STATUS FLAGS ---
       character: { select: { is_dead: true } },
       location: { select: { is_destroyed: true } },
@@ -66,7 +66,6 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
         <div>
           <h1 className="text-3xl font-bold leading-tight text-slate-900">{title}</h1>
           <p className="mt-2 text-sm text-slate-500">
-            {/* Optional: Show World Name in small text */}
             <span className="font-semibold text-blue-600 mr-1">{world.name}:</span>
             Showing {skip + 1}-{Math.min(skip + pageSize, totalCount)} of {totalCount}
           </p>
@@ -88,8 +87,17 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
             <Link 
               key={entity.id} 
               href={`/entity/${entity.id}`}
-              className="group block bg-white rounded-lg border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
+              className="group block bg-white rounded-lg border border-slate-200 overflow-hidden hover:shadow-md transition-shadow relative"
             >
+               {/* Visual Indicator for Private Entities (Visible to DMs/Players) */}
+               {entity.is_private && (
+                <div className="absolute top-2 right-2 z-10 bg-black/50 text-white p-1 rounded-full" title="Private">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                    <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+
               <div className="aspect-[4/3] bg-slate-100 relative">
                  {entity.image_uuid && entity.image_ext ? (
                    <img 

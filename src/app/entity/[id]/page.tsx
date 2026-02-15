@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
-import { cookies } from 'next/headers';
 import Link from 'next/link';
 import JournalSession from '@/components/JournalSession';
 import RichTextRenderer from '@/components/RichTextRenderer';
@@ -10,7 +9,7 @@ import { deleteEntity, deletePost } from '@/app/actions';
 import FeatureButton from '@/components/FeatureButton';
 import EntityEditableBlock from '@/components/EntityEditableBlock';
 import EditButton from '@/components/EditButton';
-import { getCurrentWorld } from '@/lib/get-current-world'; // <--- IMPORT
+import { getCurrentWorld } from '@/lib/get-current-world'; 
 
 export const dynamic = 'force-dynamic';
 
@@ -26,127 +25,83 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
 
   if (isNaN(id)) return notFound();
 
-  // 1. GET WORLD CONTEXT
-  const world = await getCurrentWorld(); // <--- GET WORLD
-  const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has('lore_session');
+  // 1. GET WORLD CONTEXT & PERMISSIONS
+  const world = await getCurrentWorld(); 
+  
+  // PERMISSION LOGIC
+  // canEdit = ADMIN or DM (Access to Edit Buttons, Forms, Dropdowns)
+  const canEdit = ['ADMIN', 'DM'].includes(world.myRole);
+  
+  // canViewPrivate = ADMIN, DM, or PLAYER (Access to Private Content)
+  const canViewPrivate = ['ADMIN', 'DM', 'PLAYER'].includes(world.myRole);
 
   // 2. FETCH ENTITY (SCOPED TO WORLD)
-  // We use findFirst instead of findUnique so we can filter by worldId
   const entity = await prisma.entity.findFirst({
     where: { 
       id,
-      worldId: world.id // <--- SECURITY FILTER
+      worldId: world.id 
     },
     include: {
       parent: { select: { id: true, name: true } },
       character: { 
         include: { 
-          race: {
-            include: { entity: { select: { id: true, name: true } } }
-          }, 
-          families: {
-            include: { 
-              family: {
-                include: { entity: { select: { id: true, name: true } } } 
-              } 
-            }
-          },
-          organisations: {
-            include: { 
-              organisation: {
-                include: { entity: { select: { id: true, name: true } } } 
-              } 
-            }
-          }
+          race: { include: { entity: { select: { id: true, name: true } } } }, 
+          families: { include: { family: { include: { entity: { select: { id: true, name: true } } } } } },
+          organisations: { include: { organisation: { include: { entity: { select: { id: true, name: true } } } } } }
         } 
       },
       location: true, 
       organisation: { 
         include: { 
           members: {
-            include: { 
-              character: {
-                include: { entity: { select: { id: true, name: true, image_uuid: true, image_ext: true, focal_x: true, focal_y: true } } } 
-              } 
-            }
+            include: { character: { include: { entity: { select: { id: true, name: true, image_uuid: true, image_ext: true, focal_x: true, focal_y: true } } } } }
           }
         } 
       },
       family: {
         include: {
           members: {
-            include: {
-              character: {
-                include: { entity: { select: { id: true, name: true, image_uuid: true, image_ext: true, focal_x: true, focal_y: true } } }
-              }
-            }
+            include: { character: { include: { entity: { select: { id: true, name: true, image_uuid: true, image_ext: true, focal_x: true, focal_y: true } } } } }
           }
         }
       },
       race: true,
       note: true,
       posts: {
-        where: isLoggedIn ? undefined : { is_private: false },
+        // Only filter out private posts if the user CANNOT view private content
+        where: canViewPrivate ? undefined : { is_private: false },
         orderBy: { id: 'desc' }, 
-        select: {
-          id: true,
-          name: true,
-          is_private: true,
-          createdAt: true,
-        }
+        select: { id: true, name: true, is_private: true, createdAt: true }
       }
     }
   });
 
   if (!entity) return notFound();
 
-  // Privacy Check
-  if (entity.is_private && !isLoggedIn) {
+  // Privacy Check: If entity is private and user cannot view private, 404
+  if (entity.is_private && !canViewPrivate) {
     return notFound();
   }
 
-  // 3. FETCH DROPDOWN LISTS (SCOPED TO WORLD)
+  // 3. FETCH DROPDOWN LISTS (Only if user can Edit)
   let locations: { id: number; name: string }[] = [];
   let races: { id: number; name: string }[] = [];
   let families: { id: number; name: string }[] = [];
   let orgs: { id: number; name: string }[] = [];
 
-  if (isLoggedIn) {
+  if (canEdit) {
     [locations, races, families, orgs] = await Promise.all([
-      prisma.entity.findMany({ 
-        where: { type: 'Location', worldId: world.id }, // <--- FILTER
-        orderBy: { name: 'asc' }, 
-        select: { id: true, name: true } 
-      }),
-      prisma.entity.findMany({ 
-        where: { type: 'Race', worldId: world.id }, // <--- FILTER
-        orderBy: { name: 'asc' }, 
-        select: { id: true, name: true } 
-      }),
-      prisma.entity.findMany({ 
-        where: { type: 'Family', worldId: world.id }, // <--- FILTER
-        orderBy: { name: 'asc' }, 
-        select: { id: true, name: true } 
-      }),
-      prisma.entity.findMany({ 
-        where: { type: 'Organisation', worldId: world.id }, // <--- FILTER
-        orderBy: { name: 'asc' }, 
-        select: { id: true, name: true } 
-      }),
+      prisma.entity.findMany({ where: { type: 'Location', worldId: world.id }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+      prisma.entity.findMany({ where: { type: 'Race', worldId: world.id }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+      prisma.entity.findMany({ where: { type: 'Family', worldId: world.id }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+      prisma.entity.findMany({ where: { type: 'Organisation', worldId: world.id }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     ]);
   }
 
-  // ... (The rest of your JSX remains exactly the same) ...
-  // To save space, I am not pasting the JSX again unless you need it.
-  // Just ensure the props passed to EntityEditableBlock are the ones derived above.
-  
+  // --- HELPERS (No Changes) ---
   const getJoinedNames = (list: any[], key: string) => {
     if (!list || !Array.isArray(list)) return null;
-    return list
-      .map((item) => item[key]?.entity?.name)
-      .filter(Boolean)
-      .join(', ');
+    return list.map((item) => item[key]?.entity?.name).filter(Boolean).join(', ');
   };
 
   const renderAttributes = () => {
@@ -197,16 +152,12 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
     }
   };
 
-  const members = entity.type === 'Organisation' 
-    ? entity.organisation?.members 
-    : entity.type === 'Family' 
-    ? entity.family?.members 
-    : null;
+  const members = entity.type === 'Organisation' ? entity.organisation?.members : entity.type === 'Family' ? entity.family?.members : null;
 
   return (
     <EntityEditableBlock 
       entity={entity} 
-      isLoggedIn={isLoggedIn}
+      isLoggedIn={canEdit} // Pass "Can Edit" permission here
       lists={{ locations, races, families, orgs }}
     >
       <div className="space-y-6 pt-2">
@@ -221,8 +172,8 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
              <h1 className="text-4xl font-extrabold text-slate-900">{entity.name}</h1>
            </div>
 
-           {/* ACTION BUTTONS */}
-           {isLoggedIn && (
+           {/* ACTION BUTTONS (Only for Editors) */}
+           {canEdit && (
             <div className="flex items-center space-x-2">
                <FeatureButton id={entity.id} isFeatured={entity.is_featured} />
                <EditButton className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all" />
@@ -305,14 +256,14 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                 Journal Entries & Logs
               </h3>
               
-              {isLoggedIn && <NewPostForm entityId={entity.id} />}
+              {canEdit && <NewPostForm entityId={entity.id} />}
 
               {entity.posts.length > 0 ? (
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 divide-y divide-slate-100">
                   {entity.posts.map(post => (
                     <div key={post.id} className="px-4 relative group">
                       
-                      {isLoggedIn && (
+                      {canEdit && (
                           <div className="absolute top-4 right-12 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                              <DeleteButton 
                                id={post.id} 
@@ -326,7 +277,7 @@ export default async function EntityPage({ params, searchParams }: PageProps) {
                         id={post.id} 
                         name={post.name} 
                         initialOpen={open === post.id.toString()}
-                        isLoggedIn={isLoggedIn}
+                        isLoggedIn={canEdit}
                         isPrivate={post.is_private} 
                       />
                     </div>

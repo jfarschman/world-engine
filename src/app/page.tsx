@@ -2,24 +2,24 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import RichTextRenderer from '@/components/RichTextRenderer';
-import { cookies } from 'next/headers';
-import { getCurrentWorld } from '@/lib/get-current-world'; // <--- IMPORT HELPER
+import { getCurrentWorld } from '@/lib/get-current-world'; 
 
 export const dynamic = 'force-dynamic';
 
 export default async function Dashboard() {
-  const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has('lore_session');
   
-  // 1. DETERMINE CURRENT WORLD
+  // 1. DETERMINE CURRENT WORLD & PERMISSIONS
   const world = await getCurrentWorld();
+  const canSeePrivate = ['ADMIN', 'DM', 'PLAYER'].includes(world.myRole);
+  const isDM = ['ADMIN', 'DM'].includes(world.myRole);
 
   // 2. FEATURED: Filter by World ID
   const featuredEntities = await prisma.entity.findMany({
     where: { 
-      worldId: world.id, // <--- WORLD FILTER
+      worldId: world.id, 
       is_featured: true,
-      ...(isLoggedIn ? {} : { is_private: false })
+      // Privacy Check
+      ...(canSeePrivate ? {} : { is_private: false })
     },
     orderBy: { name: 'asc' },
     include: { character: true, location: true, organisation: true }
@@ -30,9 +30,12 @@ export default async function Dashboard() {
     take: 5,
     orderBy: { id: 'desc' }, 
     where: {
+      // Post itself might be private
+      ...(canSeePrivate ? {} : { is_private: false }),
       entity: {
-        worldId: world.id, // <--- WORLD FILTER
-        ...(isLoggedIn ? {} : { is_private: false })
+        worldId: world.id, 
+        // Parent Entity must also be visible
+        ...(canSeePrivate ? {} : { is_private: false })
       }
     },
     include: { entity: true }
@@ -45,9 +48,12 @@ export default async function Dashboard() {
       <div className="border-b border-slate-200 pb-4">
         <h1 className="text-3xl font-extrabold text-slate-900">Dashboard</h1>
         <p className="mt-2 text-slate-500">
-          {/* Display the World Name dynamically */}
           <span className="font-semibold text-blue-600">{world.name}</span>
-          {isLoggedIn ? " — Welcome back, Dungeon Master." : " — Welcome to the Chronicles."}
+          {isDM 
+            ? " — Welcome back, Dungeon Master." 
+            : canSeePrivate 
+              ? " — Welcome, Adventurer."
+              : " — Welcome to the Chronicles."}
         </p>
       </div>
 
@@ -123,7 +129,6 @@ export default async function Dashboard() {
               <div className="flex justify-between items-start">
                  <div>
                    <div className="font-semibold text-slate-900 group-hover:text-blue-600">
-                      {/* RENDER THE TITLE THROUGH THE PARSER */}
                       <RichTextRenderer content={post.name} />
                    </div>
                    <div className="text-sm text-slate-500 mt-0.5">

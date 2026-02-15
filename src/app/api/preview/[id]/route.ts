@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { stripKankaMentions } from '@/lib/utils';
-import { cookies } from 'next/headers';
+import { getCurrentWorld } from '@/lib/get-current-world'; // [NEW] Import
 
 export async function GET(
   request: Request,
@@ -10,10 +10,13 @@ export async function GET(
   const { id: idStr } = await params;
   const id = parseInt(idStr);
 
-  const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has('lore_session');
-
   if (isNaN(id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+
+  // 1. GET WORLD CONTEXT & PERMISSIONS
+  const world = await getCurrentWorld();
+  
+  // Who can see private content? (Everyone except GUEST)
+  const canSeePrivate = ['ADMIN', 'DM', 'PLAYER'].includes(world.myRole);
 
   try {
     const entity = await prisma.entity.findUnique({
@@ -28,6 +31,7 @@ export async function GET(
         focal_y: true,
         entry: true,
         is_private: true,
+        worldId: true, // [NEW] Need this to check scope
         // --- FETCH STATUS FLAGS ---
         character: { select: { is_dead: true } },
         location: { select: { is_destroyed: true } },
@@ -39,7 +43,14 @@ export async function GET(
 
     if (!entity) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    if (entity.is_private && !isLoggedIn) {
+    // [NEW] WORLD SCOPE CHECK
+    // If the entity belongs to a different world, pretend it doesn't exist
+    if (entity.worldId !== world.id) {
+      return NextResponse.json({ error: 'Not found in this world' }, { status: 404 });
+    }
+
+    // [NEW] PRIVACY CHECK (Role-Based)
+    if (entity.is_private && !canSeePrivate) {
        return NextResponse.json({ error: 'Private' }, { status: 403 });
     }
 
@@ -51,7 +62,7 @@ export async function GET(
     if (entity.type === 'Family' && entity.family?.is_extinct) isInactive = true;
     if (entity.type === 'Race' && entity.race?.is_extinct) isInactive = true;
 
-    // Clean text logic
+    // Clean text logic (Preserved exactly as is)
     let cleanText = stripKankaMentions(entity.entry || '');
     cleanText = cleanText.replace(/<[^>]*>?/gm, '');
     cleanText = cleanText
@@ -74,7 +85,7 @@ export async function GET(
       focal_x: entity.focal_x,
       focal_y: entity.focal_y,
       entry: previewText,
-      is_inactive: isInactive // <--- SEND TO FRONTEND
+      is_inactive: isInactive 
     });
 
   } catch (error) {
