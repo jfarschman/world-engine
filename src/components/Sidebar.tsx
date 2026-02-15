@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { cookies } from 'next/headers';
-import { logout } from '@/app/actions';
+import { getServerSession } from "next-auth"; // [NEW] Fetch session
+import { authOptions } from "@/lib/auth";      // [NEW] Auth config
 import SidebarSearch from './SidebarSearch';
-import { getCurrentWorld } from '@/lib/get-current-world'; // <--- Import Helper
+import { getCurrentWorld } from '@/lib/get-current-world'; 
 import { 
   HomeIcon, 
   UserGroupIcon, 
@@ -29,11 +29,13 @@ const navItems = [
 ];
 
 export default async function Sidebar() {
-  const cookieStore = await cookies();
-  const isLoggedIn = cookieStore.has('lore_session');
-  
-  // 1. Fetch Dynamic World Data
+  // 1. Fetch Session & World Data
+  const session = await getServerSession(authOptions);
   const world = await getCurrentWorld();
+
+  // 2. Determine Permissions
+  // We only show "Create" buttons if the user is an ADMIN or DM in *this* world.
+  const canEdit = world.myRole === 'ADMIN' || world.myRole === 'DM';
 
   return (
     <div className="flex h-full w-full flex-col bg-slate-900 text-white overflow-y-auto">
@@ -41,7 +43,6 @@ export default async function Sidebar() {
       {/* Brand: Dynamic Name */}
       <div className="flex h-16 items-center justify-center border-b border-slate-800 bg-slate-950 px-4 shrink-0">
         <h1 className="text-xl font-bold tracking-widest text-blue-400">
-          {/* Split name for styling (First word blue, rest white) */}
           {world.name.split(' ')[0]} <span className="text-white">{world.name.split(' ').slice(1).join(' ')}</span>
         </h1>
       </div>
@@ -63,8 +64,8 @@ export default async function Sidebar() {
               {item.name}
             </Link>
             
-            {/* Contextual Create Button */}
-            {isLoggedIn && item.type && (
+            {/* Contextual Create Button - Only for ADMIN/DM */}
+            {canEdit && item.type && (
                <Link
                  href={`/entity/create?type=${item.type}`}
                  className="hidden group-hover:flex items-center justify-center px-2 py-2 rounded-r-md hover:bg-slate-700 text-slate-500 hover:text-green-400 transition-colors"
@@ -79,20 +80,31 @@ export default async function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-slate-800 p-4 shrink-0">
-        {isLoggedIn ? (
-          <form action={logout}>
-            <button className="flex w-full items-center px-2 py-2 text-sm font-medium text-red-400 hover:bg-slate-800 hover:text-red-300 rounded-md transition-colors">
-              <ArrowLeftOnRectangleIcon className="mr-3 h-5 w-5" />
-              Logout
-            </button>
-          </form>
+        {session ? (
+          <div className="space-y-2">
+             {/* Optional: Show who is logged in */}
+             <p className="text-xs text-slate-500 text-center truncate">
+               {session.user?.email} 
+               <span className="block text-blue-400">({world.myRole})</span>
+             </p>
+             
+             {/* Sign Out Link */}
+             <Link 
+               href="/api/auth/signout" 
+               className="flex w-full items-center justify-center px-2 py-2 text-sm font-medium text-red-400 hover:bg-slate-800 hover:text-red-300 rounded-md transition-colors"
+             >
+               <ArrowLeftOnRectangleIcon className="mr-3 h-5 w-5" />
+               Logout
+             </Link>
+          </div>
         ) : (
+          /* Sign In Link */
           <Link 
-            href="/login"
+            href="/api/auth/signin"
             className="flex w-full items-center px-2 py-2 text-sm font-medium text-blue-400 hover:bg-slate-800 hover:text-blue-300 rounded-md transition-colors"
           >
             <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5" />
-            DM Login
+            Login
           </Link>
         )}
       </div>
