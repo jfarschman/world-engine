@@ -3,10 +3,20 @@
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { getCurrentWorld } from '@/lib/get-current-world'; // [NEW] Import permissions
+
+// --- HELPER: Gatekeeper ---
+// This ensures only Admins/DMs of the CURRENT world can perform actions.
+async function assertPermission() {
+  const world = await getCurrentWorld();
+  if (world.myRole !== 'ADMIN' && world.myRole !== 'DM') {
+    throw new Error('Unauthorized: You do not have permission to edit this world.');
+  }
+  return world;
+}
 
 // --- HELPER: Save Image to Disk ---
 async function saveImage(formData: FormData): Promise<{ uuid: string | null; ext: string | null }> {
@@ -36,7 +46,8 @@ async function saveImage(formData: FormData): Promise<{ uuid: string | null; ext
 
 // --- CREATE ENTITY ---
 export async function createEntity(formData: FormData) {
-  'use server';
+  // 1. Security Check & Context
+  const world = await assertPermission(); 
 
   const name = formData.get('name') as string;
   const type = formData.get('type') as string;
@@ -62,9 +73,11 @@ export async function createEntity(formData: FormData) {
     focal_x,
     focal_y,
     is_private,
+    worldId: world.id, // [NEW] Bind entity to the current world
     ...(image_uuid && { image_uuid, image_ext }),
   };
 
+  // ... (Rest of Type-Specific Logic remains identical) ...
   if (type === 'Character') {
     const raceId = parseId('race_id');
     const familyId = parseId('family_id');
@@ -74,7 +87,7 @@ export async function createEntity(formData: FormData) {
       create: {
         title: formData.get('title') as string,
         age: formData.get('age') as string,
-        role: formData.get('role') as string || 'NPC', // <--- NEW FIELD
+        role: formData.get('role') as string || 'NPC',
         is_dead: formData.get('is_dead') === 'on',
         race: raceId ? { connect: { entityId: raceId } } : undefined,
         families: familyId ? { create: { family: { connect: { entityId: familyId } } } } : undefined,
@@ -121,6 +134,8 @@ export async function createEntity(formData: FormData) {
 
 // --- UPDATE ENTITY ---
 export async function updateEntity(formData: FormData) {
+  await assertPermission(); // [NEW] Security Check
+
   const id = parseInt(formData.get('id') as string);
   const name = formData.get('name') as string;
   const type = formData.get('type') as string;
@@ -156,6 +171,7 @@ export async function updateEntity(formData: FormData) {
     return val ? parseInt(val as string) : null; 
   };
 
+  // ... (Rest of Type-Specific Logic remains identical) ...
   if (type === 'Character') {
     const raceId = parseId('race_id');
     const familyId = parseId('family_id');
@@ -166,7 +182,7 @@ export async function updateEntity(formData: FormData) {
         create: {
           title: formData.get('title') as string,
           age: formData.get('age') as string,
-          role: formData.get('role') as string || 'NPC', // <--- NEW FIELD
+          role: formData.get('role') as string || 'NPC',
           is_dead: formData.get('is_dead') === 'on',
           race: raceId ? { connect: { entityId: raceId } } : undefined,
           families: familyId ? { create: { family: { connect: { entityId: familyId } } } } : undefined,
@@ -175,7 +191,7 @@ export async function updateEntity(formData: FormData) {
         update: {
           title: formData.get('title') as string,
           age: formData.get('age') as string,
-          role: formData.get('role') as string || 'NPC', // <--- NEW FIELD
+          role: formData.get('role') as string || 'NPC',
           is_dead: formData.get('is_dead') === 'on',
           race: raceId ? { connect: { entityId: raceId } } : { disconnect: true },
           families: familyId 
@@ -189,6 +205,7 @@ export async function updateEntity(formData: FormData) {
     };
   }
 
+  // Type Logic blocks for Location, Organisation, Family, Race remain identical to original
   if (type === 'Location') {
     const parentId = parseId('parent_location_id');
     updateData.location = {
@@ -199,31 +216,28 @@ export async function updateEntity(formData: FormData) {
     };
     if (parentId) updateData.parentId = parentId;
   }
-
   if (type === 'Organisation') {
     updateData.organisation = {
-      upsert: {
-        create: { is_defunct: formData.get('is_defunct') === 'on' },
-        update: { is_defunct: formData.get('is_defunct') === 'on' }
-      }
+        upsert: {
+            create: { is_defunct: formData.get('is_defunct') === 'on' },
+            update: { is_defunct: formData.get('is_defunct') === 'on' }
+        }
     };
   }
-
   if (type === 'Family') {
     updateData.family = {
-      upsert: {
-        create: { is_extinct: formData.get('is_extinct') === 'on' },
-        update: { is_extinct: formData.get('is_extinct') === 'on' }
-      }
+        upsert: {
+            create: { is_extinct: formData.get('is_extinct') === 'on' },
+            update: { is_extinct: formData.get('is_extinct') === 'on' }
+        }
     };
   }
-
   if (type === 'Race') {
     updateData.race = {
-      upsert: {
-        create: { is_extinct: formData.get('is_extinct') === 'on' },
-        update: { is_extinct: formData.get('is_extinct') === 'on' }
-      }
+        upsert: {
+            create: { is_extinct: formData.get('is_extinct') === 'on' },
+            update: { is_extinct: formData.get('is_extinct') === 'on' }
+        }
     };
   }
 
@@ -237,8 +251,8 @@ export async function updateEntity(formData: FormData) {
 }
 
 export async function deleteEntity(id: number) {
-  const cookieStore = await cookies();
-  if (!cookieStore.has('lore_session')) throw new Error('Unauthorized');
+  await assertPermission(); // [NEW] Security Check
+
   try {
     await prisma.post.deleteMany({ where: { entityId: id } });
     await prisma.entity.delete({ where: { id } });
@@ -253,6 +267,8 @@ export async function deleteEntity(id: number) {
 // --- POST ACTIONS ---
 
 export async function createPost(formData: FormData) {
+  await assertPermission(); // [NEW] Security Check
+
   const entityId = parseInt(formData.get('entity_id') as string);
   const name = formData.get('name') as string;
   const entry = formData.get('entry') as string;
@@ -267,8 +283,7 @@ export async function createPost(formData: FormData) {
 }
 
 export async function updatePost(formData: FormData) {
-  const cookieStore = await cookies();
-  if (!cookieStore.has('lore_session')) throw new Error('Unauthorized');
+  await assertPermission(); // [NEW] Security Check
 
   const id = parseInt(formData.get('id') as string);
   const name = formData.get('name') as string;
@@ -286,8 +301,7 @@ export async function updatePost(formData: FormData) {
 }
 
 export async function deletePost(id: number) {
-  const cookieStore = await cookies();
-  if (!cookieStore.has('lore_session')) throw new Error('Unauthorized');
+  await assertPermission(); // [NEW] Security Check
   
   const post = await prisma.post.findUnique({ where: { id } });
   
@@ -297,28 +311,11 @@ export async function deletePost(id: number) {
   if (post) revalidatePath(`/entity/${post.entityId}`);
 }
 
-export async function login(formData: FormData) {
-  const password = formData.get('password') as string;
-  if (password === process.env.DM_PASSWORD) {
-    const cookieStore = await cookies();
-    cookieStore.set('lore_session', 'authenticated', {
-      httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 60*60*24*30, path: '/'
-    });
-    return { success: true };
-  } else {
-    return { error: 'Incorrect password.' };
-  }
-}
-
-export async function logout() {
-  const cookieStore = await cookies();
-  cookieStore.delete('lore_session');
-  redirect('/');
-}
+// --- TOGGLE FEATURED ---
 
 export async function toggleFeatured(id: number) {
-  const cookieStore = await cookies();
-  if (!cookieStore.has('lore_session')) throw new Error('Unauthorized');
+  await assertPermission(); // [NEW] Security Check
+  
   const entity = await prisma.entity.findUnique({ where: { id } });
   if (!entity) return;
   await prisma.entity.update({
