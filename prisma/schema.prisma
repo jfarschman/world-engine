@@ -16,6 +16,7 @@ model World {
   kanka_campaign_id Int?     @unique // Used by ingest script to route data
   
   entities          Entity[]
+  memberships       WorldMembership[]
 }
 
 model Entity {
@@ -176,4 +177,68 @@ model Mention {
   targetId Int
   source   Entity @relation("MentionSource", fields: [sourceId], references: [id])
   target   Entity @relation("MentionTarget", fields: [targetId], references: [id])
+}
+
+// ---------------------------------------------------------
+// AUTH & RBAC MODELS
+// ---------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Custom: Link users to worlds with a role
+  memberships   WorldMembership[]
+}
+
+model WorldMembership {
+  id        Int     @id @default(autoincrement())
+  userId    String
+  worldId   Int
+  role      String  @default("PLAYER") // Options: "ADMIN", "DM", "PLAYER"
+  
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  world     World   @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, worldId]) // A user can only have one role per world
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
