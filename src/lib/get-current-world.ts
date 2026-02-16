@@ -39,12 +39,12 @@ export async function getCurrentWorld(): Promise<WorldWithPermissions> {
   // 3. Determine Role
   let myRole: 'ADMIN' | 'DM' | 'PLAYER' | 'GUEST' = 'GUEST';
 
-  if (session?.user?.id && world) {
+  if ((session?.user as any)?.id && world) {
     // Check the membership table
     const membership = await prisma.worldMembership.findUnique({
       where: {
         userId_worldId: {
-          userId: session.user.id,
+	  userId: (session!.user as any).id,
           worldId: world!.id
         }
       }

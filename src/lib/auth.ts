@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
   // 1. Connect NextAuth to your Prisma Database
-  adapter: PrismaAdapter(prisma), // @ts-expect-error - Adapter type mismatch is common in v4/v5 overlap, usually safe to ignore if functionality works
+  adapter: PrismaAdapter(prisma),
   
   // 2. Configure Google
   providers: [
@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, user }) {
       // Attach the user's ID to the session so we can query memberships later
       if (session.user) {
-        session.user.id = user.id; 
+        (session.user as any).id = user.id; 
       }
       return session;
     },
