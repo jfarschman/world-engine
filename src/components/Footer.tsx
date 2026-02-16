@@ -3,7 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export default function Footer() {
+// Define the shape of the props this component expects
+interface FooterProps {
+  userRole?: 'ADMIN' | 'DM' | 'PLAYER' | 'GUEST';
+}
+
+export default function Footer({ userRole = 'GUEST' }: FooterProps) {
   const pathname = usePathname();
   const currentYear = new Date().getFullYear();
   
@@ -50,6 +55,18 @@ export default function Footer() {
                   GM Login
                 </Link>
               </li>
+
+              {/* --- NEW: ADMIN ONLY LINK --- */}
+              {userRole === 'ADMIN' && (
+                <li className="pt-2 mt-2 border-t border-slate-100">
+                  <a 
+                    href="/api/export" 
+                    className="text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors flex items-center gap-2"
+                  >
+                    <span>Export World Data (Zip)</span>
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
 
