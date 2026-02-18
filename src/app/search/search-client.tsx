@@ -62,7 +62,7 @@ export default function SearchClient() {
       const res = await fetch(`/api/search?q=${encodeURIComponent(term)}&page=${pageNum}`);
       const data = await res.json();
       // Handle response structure { results: [...] }
-      setResults(data.results || []); 
+      setResults(Array.isArray(data) ? data : []); 
     } catch (error) {
       console.error(error);
     } finally {
