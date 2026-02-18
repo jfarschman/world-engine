@@ -12,6 +12,8 @@ interface SearchResult {
   type: string;
   image_uuid: string | null;
   image_ext: string | null;
+  focal_x: number | null;
+  focal_y: number | null;
   source: 'Entity' | 'Post';
 }
 
@@ -109,8 +111,12 @@ export default function SearchClient() {
                   <img 
                     src={`/gallery/${result.image_uuid}.${result.image_ext}`}
                     alt={result.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-all duration-500"
                     loading="lazy"
+                    // --- NEW: Apply the focal point ---
+                    style={{
+                      objectPosition: `${result.focal_x ?? 50}% ${result.focal_y ?? 50}%`
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-300 font-bold text-2xl">
