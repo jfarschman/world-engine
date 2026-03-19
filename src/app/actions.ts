@@ -124,6 +124,15 @@ export async function createEntity(formData: FormData) {
     entityData.note = { create: { type: formData.get('note_type') as string } };
   }
 
+  if (type === 'Journal') {
+    const dateVal = formData.get('journal_date') as string;
+    entityData.journal = {
+      create: {
+        date: dateVal ? new Date(dateVal) : null,
+      },
+    };
+  }
+
   const newEntity = await prisma.entity.create({
     data: entityData,
   });
@@ -206,6 +215,17 @@ export async function updateEntity(formData: FormData) {
   }
 
   // Type Logic blocks for Location, Organisation, Family, Race remain identical to original
+
+  if (type === 'Journal') {
+    const dateVal = formData.get('journal_date') as string;
+    updateData.journal = {
+      upsert: {
+        create: { date: dateVal ? new Date(dateVal) : null },
+        update: { date: dateVal ? new Date(dateVal) : null }
+      }
+    };
+  }
+
   if (type === 'Location') {
     const parentId = parseId('parent_location_id');
     updateData.location = {

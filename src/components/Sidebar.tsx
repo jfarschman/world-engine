@@ -25,7 +25,7 @@ const navItems = [
   { name: 'Families', href: '/families', icon: UsersIcon, type: 'Family' },
   { name: 'Ancestries', href: '/ancestries', icon: SparklesIcon, type: 'Race' },
   { name: 'Notes', href: '/notes', icon: DocumentTextIcon, type: 'Note' },
-  { name: 'Journals', href: '/journals', icon: BookOpenIcon }, 
+  { name: 'Journals', href: '/journals', icon: BookOpenIcon, type: 'Journal' },
 ];
 
 export default async function Sidebar() {

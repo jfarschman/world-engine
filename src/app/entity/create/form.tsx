@@ -33,7 +33,7 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">Entity Type</label>
           <div className="flex flex-wrap gap-2">
-            {['Character', 'Location', 'Organisation', 'Family', 'Race', 'Note'].map((t) => (
+            {['Character', 'Location', 'Organisation', 'Family', 'Race', 'Note', 'Journal'].map((t) => (
               <button
                 key={t}
                 type="button"
@@ -176,6 +176,21 @@ export default function EntityForm({ locations, races, families, orgs }: FormPro
                 <option value="Idea">Idea</option>
               </select>
             </div>
+        )}
+
+        {/* JOURNAL */}
+        {type === 'Journal' && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Journal Date</label>
+            <input 
+              name="journal_date" 
+              type="date" 
+              className="mt-1 block w-full border rounded-md py-2 px-3 border-slate-300 bg-white" 
+            />
+            <p className="mt-1 text-xs text-slate-500 italic">
+              Optional: Leave blank to set no specific date.
+            </p>
+          </div>
         )}
       </div>
 
