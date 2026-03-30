@@ -1,37 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+World Engine
+World Engine is a high-performance world-building and campaign management tool designed for tabletop RPGs like Dungeons & Dragons and DaggerHeart. It allows Game Masters to organize lore, track characters, manage locations, and maintain session journals in a centralized, searchable database.
 
-## Getting Started
+🚀 Quick Start (Local Development)
+1. Prerequisites
 
-First, run the development server:
+Ensure you have the following installed:
 
-```bash
+Node.js (v18.x or higher)
+
+npm
+
+Git
+
+PostgreSQL
+
+2. Clone and Install
+
+Bash
+git clone https://github.com/<your-username>/world-engine.git
+cd world-engine
+npm install
+3. Environment Setup
+
+Create a .env file in the root directory:
+
+Code snippet
+DATABASE_URL="postgresql://<user>:<password>@localhost:5433/<db_name>"
+NEXTAUTH_SECRET="<generate-a-random-secret>"
+NEXTAUTH_URL="http://localhost:3000"
+Note: If you are using a production database via an SSH tunnel, ensure your DATABASE_URL points to the correct local port (e.g., 5433).
+
+4. Database Setup
+
+Sync your Prisma schema and generate the client:
+
+Bash
+npx prisma generate
+npx prisma db push
+5. Run the Server
+
+Bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Access the app at http://localhost:3000.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🛠 Tech Stack
+Framework: Next.js (App Router)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Database & ORM: PostgreSQL with Prisma
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Styling: Tailwind CSS
 
-## Learn More
+Authentication: NextAuth.js
 
-To learn more about Next.js, take a look at the following resources:
+Media Handling: Local filesystem storage with dynamic focal point positioning
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Exporting: JSZip and Turndown for Markdown backups
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+🔒 Security & Best Practices
+Singleton Prisma Client: Prevents "too many clients" errors by attaching the client to the global scope during development.
 
-## Deploy on Vercel
+Nginx Hardening: Configured with server_tokens off; and custom rate limiting on the /api/search endpoint to mitigate fingerprinting and scraping.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Focal Point Logic: Images utilize focal_x and focal_y coordinates to ensure critical visual elements (like NPC faces) remain centered in thumbnails.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# world-engine
+🛰 Development Workflow
+Database SSH Tunneling
+
+To connect your local environment to a remote production database:
+
+Bash
+ssh -i <path-to-your-key.pem> -L 5433:localhost:5432 <user>@<server-address>
+Media Synchronization (rsync)
+
+To pull gallery images from the production server to your local machine:
+
+Bash
+rsync -avz -e "ssh -i <path-to-your-key.pem>" "<user>@<server-address>:~/world-engine/public/gallery/*" ./public/gallery/
+📂 Project Structure
+/src/app: Next.js pages and API routes.
+
+/src/components: UI components (Sidebar, Search, RichTextEditor).
+
+/src/lib: Shared utilities (Prisma client, Auth configuration).
+
+/public/gallery: Storage for uploaded entity images.
+
+schema.prisma: The database source of truth.
