@@ -247,7 +247,7 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
                   </div>
                 </form>
               ) : (
-                <div className="prose prose-slate max-w-none pr-8 whitespace-pre-wrap">
+                <div className="prose prose-slate max-w-none pr-8 [&_p:empty]:min-h-[1.5rem]">
                   {content ? parseContent(content) : <p className="text-slate-400 italic">This entry is empty.</p>}
                 </div>
               )}
