@@ -48,7 +48,7 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
           const data = await res.json();
           // Use the util, but ensure we fallback to empty string if undefined
           const safeEntry = data.entry || ''; 
-          setContent(resolveKankaMentions(safeEntry));
+          setContent(safeEntry);
         } catch (error) {
           console.error("Failed to load journal entry", error);
           setContent("<p><em>Error loading entry.</em></p>");
@@ -185,7 +185,8 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
                   </div>
                 </form>
               ) : (
-                <div className="prose prose-slate max-w-none pr-8 prose-p:mb-4">
+                <div className="prose prose-slate max-w-none pr-8 prose-p::51
+                  mb-4">
                   {content ? <RichTextRenderer content={content} /> : <p className="text-slate-400 italic">This entry is empty.</p>}
                 </div>
               )}
