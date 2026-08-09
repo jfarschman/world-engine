@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { resolveKankaMentions } from '@/lib/utils';
 import { updatePost } from '@/app/actions';
-import parse, { domToReact } from 'html-react-parser';
-import EntityLink from './EntityLink';
+import RichTextRenderer from './RichTextRenderer';
 import RichTextEditor from './RichTextEditor';
 import { PencilSquareIcon, EyeSlashIcon } from '@heroicons/react/24/outline'; // <--- IMPORT
 
@@ -63,66 +61,6 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
   }, [isOpen, content, loading, id]);
 
   const toggleOpen = () => setIsOpen(!isOpen);
-
-  // --- ROBUST PARSER ---
-  const parseContent = (htmlString: string) => {
-    try {
-      // 1. Resolve Legacy Mentions
-      let safeHtml = resolveKankaMentions(htmlString);
-
-      // 2. Sanitize tricky characters
-      safeHtml = safeHtml.replace(/<(and|or|but|the)\b/gi, '&lt;$1');
-
-      // 3. Parse and replace Elements
-      return parse(safeHtml, {
-        replace: (domNode) => {
-          // CHECK 1: Tiptap Mentions (<span data-type="mention">)
-          if (domNode.type === 'tag' && domNode.name === 'span' && domNode.attribs['data-type'] === 'mention') {
-             const id = parseInt(domNode.attribs['data-id']);
-             const label = domNode.attribs['data-label'];
-             
-             if (id) {
-               return (
-                 <EntityLink id={id} name={label || 'Entity'}>
-                   <span className="bg-blue-50 text-blue-700 rounded px-1 py-0.5 font-medium">
-                     {label || 'Entity'}
-                   </span>
-                 </EntityLink>
-               );
-             }
-          }
-
-          // CHECK 2: Standard Links (<a>)
-          if (domNode.type === 'tag' && domNode.name === 'a') {
-            const href = domNode.attribs.href;
-            const title = domNode.attribs.title;
-            let entityId = null;
-
-            if (title) {
-              const titleMatch = title.match(/[:#](\d+)/); 
-              if (titleMatch) entityId = parseInt(titleMatch[1]);
-            }
-            if (!entityId && href) {
-               const hrefMatch = href.match(/entity\/(\d+)/); 
-               if (hrefMatch) entityId = parseInt(hrefMatch[1]);
-            }
-
-            if (entityId) {
-              return (
-                <EntityLink id={entityId} name={title || 'Entity'}>
-                  {/* @ts-ignore */}
-                  {domToReact(domNode.children)}
-                </EntityLink>
-              );
-            }
-          }
-        }
-      });
-    } catch (e) {
-      console.error("Parser Error:", e);
-      return <div className="text-red-600 bg-red-50 p-2 text-sm font-mono whitespace-pre-wrap">{htmlString}</div>;
-    }
-  };
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation(); 
@@ -247,8 +185,8 @@ export default function JournalSession({ id, name, initialOpen = false, isLogged
                   </div>
                 </form>
               ) : (
-                <div className="prose prose-slate max-w-none pr-8 [&_p:empty]:min-h-[1.5rem]">
-                  {content ? parseContent(content) : <p className="text-slate-400 italic">This entry is empty.</p>}
+                <div className="prose prose-slate max-w-none pr-8 prose-p:mb-4">
+                  {content ? <RichTextRenderer content={content} /> : <p className="text-slate-400 italic">This entry is empty.</p>}
                 </div>
               )}
             </>
