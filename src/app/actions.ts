@@ -137,7 +137,7 @@ export async function createEntity(formData: FormData) {
     data: entityData,
   });
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
   redirect(`/entity/${newEntity.id}`);
 }
 
@@ -328,7 +328,7 @@ export async function deletePost(id: number) {
   await prisma.post.delete({ where: { id } });
   
   revalidatePath('/', 'layout');
-  redirect(`/entity/${newEntity.id}`);
+  if (post) revalidatePath(`/entity/${post.entityId}`);
 }
 
 // --- TOGGLE FEATURED ---
