@@ -138,7 +138,12 @@ export async function createEntity(formData: FormData) {
   });
 
   revalidatePath('/', 'layout');
-  redirect(`/`);
+
+  if (world.domain) {
+    redirect(`https://${world.domain}/entity/${newEntity.id}`);
+  } else {
+    redirect(`/entity/${newEntity.id}`);
+  }
 }
 
 // --- UPDATE ENTITY ---
