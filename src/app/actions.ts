@@ -327,8 +327,8 @@ export async function deletePost(id: number) {
   
   await prisma.post.delete({ where: { id } });
   
-  revalidatePath('/');
-  if (post) revalidatePath(`/entity/${post.entityId}`);
+  revalidatePath('/', 'layout');
+  redirect(`/entity/${newEntity.id}`);
 }
 
 // --- TOGGLE FEATURED ---
