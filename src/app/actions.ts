@@ -138,7 +138,7 @@ export async function createEntity(formData: FormData) {
   });
 
   revalidatePath('/', 'layout');
-  redirect(`/entity/${newEntity.id}`);
+  redirect(`/`);
 }
 
 // --- UPDATE ENTITY ---
