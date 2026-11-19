@@ -18,6 +18,32 @@ async function assertPermission() {
   return world;
 }
 
+async function assertEntityInWorld(entityId: number, worldId: number) {
+  const entity = await prisma.entity.findFirst({
+    where: { id: entityId, worldId },
+    select: { id: true, is_featured: true },
+  });
+  if (!entity) {
+    throw new Error('Entity not found in this world.');
+  }
+  return entity;
+}
+
+async function assertPostInWorld(postId: number, worldId: number) {
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: {
+      id: true,
+      entityId: true,
+      entity: { select: { worldId: true } },
+    },
+  });
+  if (!post || post.entity.worldId !== worldId) {
+    throw new Error('Post not found in this world.');
+  }
+  return post;
+}
+
 const ALLOWED_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']);
 
 // --- HELPER: Save Image to Disk ---
@@ -156,8 +182,11 @@ export async function createEntity(formData: FormData) {
 export async function updateEntity(formData: FormData) {
   await assertPermission(); // [NEW] Security Check
 
+  const world = await assertPermission();
   const id = parseInt(formData.get('id') as string);
   const name = formData.get('name') as string;
+  if (!id || !name) throw new Error('Missing required fields');
+  await assertEntityInWorld(id, world.id);
   const type = formData.get('type') as string;
   const entry = formData.get('entry') as string;
 
@@ -282,6 +311,8 @@ export async function updateEntity(formData: FormData) {
 }
 
 export async function deleteEntity(id: number) {
+  const world = await assertPermission();
+  await assertEntityInWorld(id, world.id);
   await assertPermission(); // [NEW] Security Check
 
   try {
@@ -300,7 +331,9 @@ export async function deleteEntity(id: number) {
 export async function createPost(formData: FormData) {
   await assertPermission(); // [NEW] Security Check
 
+  const world = await assertPermission();
   const entityId = parseInt(formData.get('entity_id') as string);
+  await assertEntityInWorld(entityId, world.id);
   const name = formData.get('name') as string;
   const entry = formData.get('entry') as string;
   const is_private = formData.get('is_private') === 'on';
@@ -316,7 +349,9 @@ export async function createPost(formData: FormData) {
 export async function updatePost(formData: FormData) {
   await assertPermission(); // [NEW] Security Check
 
+  const world = await assertPermission();
   const id = parseInt(formData.get('id') as string);
+  const post = await assertPostInWorld(id, world.id);
   const name = formData.get('name') as string;
   const entry = formData.get('entry') as string;
   const entityId = parseInt(formData.get('entity_id') as string);
@@ -333,13 +368,12 @@ export async function updatePost(formData: FormData) {
 
 export async function deletePost(id: number) {
   await assertPermission(); // [NEW] Security Check
-  
-  const post = await prisma.post.findUnique({ where: { id } });
-  
+
+  const world = await assertPermission();
+  const post = await assertPostInWorld(id, world.id);
   await prisma.post.delete({ where: { id } });
-  
   revalidatePath('/', 'layout');
-  if (post) revalidatePath(`/entity/${post.entityId}`);
+  revalidatePath(`/entity/${post.entityId}`);
 }
 
 // --- TOGGLE FEATURED ---
@@ -347,12 +381,12 @@ export async function deletePost(id: number) {
 export async function toggleFeatured(id: number) {
   await assertPermission(); // [NEW] Security Check
   
-  const entity = await prisma.entity.findUnique({ where: { id } });
-  if (!entity) return;
+  const world = await assertPermission();
+  const entity = await assertEntityInWorld(id, world.id);
   await prisma.entity.update({
     where: { id },
-    data: { is_featured: !entity.is_featured }
+    data: { is_featured: !entity.is_featured },
   });
-  revalidatePath('/'); 
+  revalidatePath('/');
   revalidatePath(`/entity/${id}`);
 }
