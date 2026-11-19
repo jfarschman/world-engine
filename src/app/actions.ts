@@ -140,9 +140,9 @@ export async function createEntity(formData: FormData) {
   revalidatePath('/', 'layout');
 
   if (world.domain) {
-    redirect(`https://${world.domain}/entity/${newEntity.id}`);
+    redirect(`https://${world.domain}`);
   } else {
-    redirect(`/entity/${newEntity.id}`);
+    redirect(`/`);
   }
 }
 
