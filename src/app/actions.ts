@@ -8,12 +8,6 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { getCurrentWorld } from '@/lib/get-current-world'; // [NEW] Import permissions
 
-const ALLOWED_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']);
-const rawExt = (imageFile.name.split('.').pop() || '').toLowerCase();
-if (!ALLOWED_EXTS.has(rawExt)) {
-  throw new Error('Unsupported image format');
-}
-
 // --- HELPER: Gatekeeper ---
 // This ensures only Admins/DMs of the CURRENT world can perform actions.
 async function assertPermission() {
@@ -24,6 +18,8 @@ async function assertPermission() {
   return world;
 }
 
+const ALLOWED_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']);
+
 // --- HELPER: Save Image to Disk ---
 async function saveImage(formData: FormData): Promise<{ uuid: string | null; ext: string | null }> {
   const imageFile = formData.get('image_file') as File;
@@ -32,18 +28,22 @@ async function saveImage(formData: FormData): Promise<{ uuid: string | null; ext
     return { uuid: null, ext: null };
   }
 
+  const rawExt = (imageFile.name.split('.').pop() || '').toLowerCase();
+  if (!ALLOWED_EXTS.has(rawExt)) {
+    throw new Error('Unsupported image format');
+  }
+
   try {
     const buffer = Buffer.from(await imageFile.arrayBuffer());
     const uuid = randomUUID();
-    const ext = imageFile.name.split('.').pop() || 'jpg';
     
     const uploadDir = path.join(process.cwd(), 'public', 'gallery');
     await mkdir(uploadDir, { recursive: true });
 
-    const filePath = path.join(uploadDir, `${uuid}.${ext}`);
+    const filePath = path.join(uploadDir, `${uuid}.${rawExt}`);
     await writeFile(filePath, buffer);
 
-    return { uuid, ext };
+    return { uuid, ext: rawExt };
   } catch (error) {
     console.error("Image upload failed:", error);
     return { uuid: null, ext: null };
