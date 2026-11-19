@@ -18,11 +18,9 @@ export default async function Dashboard() {
     where: { 
       worldId: world.id, 
       is_featured: true,
-      // Privacy Check
       ...(canSeePrivate ? {} : { is_private: false })
     },
     orderBy: { name: 'asc' },
-    include: { character: true, location: true, organisation: true }
   });
 
   // 3. RECENT POSTS: Filter by World ID (via Entity relation)
@@ -30,15 +28,13 @@ export default async function Dashboard() {
     take: 5,
     orderBy: { id: 'desc' }, 
     where: {
-      // Post itself might be private
       ...(canSeePrivate ? {} : { is_private: false }),
       entity: {
         worldId: world.id, 
-        // Parent Entity must also be visible
         ...(canSeePrivate ? {} : { is_private: false })
       }
     },
-    include: { entity: true }
+    include: { entity: { select: { name: true } } }
   });
 
   return (

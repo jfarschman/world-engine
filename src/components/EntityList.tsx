@@ -103,7 +103,7 @@ export default async function EntityList({ type, title, page = 1 }: EntityListPr
                    <img 
                      src={`/gallery/${entity.image_uuid}.${entity.image_ext}`} 
                      alt={entity.name} 
-                     className={`w-full h-full object-cover loading="lazy" ${isInactive ? 'grayscale' : ''}`}
+                     className={`w-full h-full object-cover ${isInactive ? 'grayscale' : ''}`}
                      style={{
                         objectPosition: `${entity.focal_x || 50}% ${entity.focal_y || 50}%`
                      }}
