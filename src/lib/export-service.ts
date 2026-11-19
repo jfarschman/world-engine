@@ -14,107 +14,160 @@ function toMarkdown(html: string | null) {
   return turndownService.turndown(html);
 }
 
+// Helper to produce safe, readable filenames for individual Markdown exports
+function sanitizeFilename(name: string, fallbackId: number): string {
+  const cleaned = name
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "") // Strip filesystem-unsafe characters
+    .replace(/\s+/g, "-")                  // Replace whitespace runs with single hyphens
+    .replace(/-+/g, "-")                   // Collapse duplicate hyphens
+    .replace(/^-|-$/g, "");                // Trim leading/trailing hyphens
+
+  return cleaned || `journal-${fallbackId}`;
+}
+
+// Shared Prisma include shape for entities
+const entityExportInclude = {
+  character: {
+    include: {
+      race: { include: { entity: true } },
+      families: { include: { family: { include: { entity: true } } } },
+    },
+  },
+  location: true,
+  family: true,
+  organisation: true,
+  race: true,
+  relationshipsOut: { include: { target: true } },
+  mentions: { include: { target: true } },
+  posts: { orderBy: { createdAt: "asc" as const } },
+};
+
+// Formats a single entity (and its child posts) into Markdown
+function formatEntityMarkdown(entity: any): string {
+  let content = "";
+
+  // --- HEADER ---
+  content += `# ${entity.name}\n`;
+
+  // --- METADATA BLOCK ---
+  const metadata: string[] = [];
+
+  if (entity.character) {
+    if (entity.character.title) {
+      metadata.push(`**Title:** ${entity.character.title}`);
+    }
+    if (entity.character.race?.entity?.name) {
+      metadata.push(`**Race:** ${entity.character.race.entity.name}`);
+    }
+
+    const familyNames = entity.character.families
+      .map((f: any) => f.family.entity.name)
+      .join(", ");
+    if (familyNames) {
+      metadata.push(`**Family:** ${familyNames}`);
+    }
+  }
+
+  // Relationships (e.g., "Sibling: Hoid")
+  const rels = entity.relationshipsOut.map(
+    (r: any) => `${r.type}: ${r.target.name}`
+  );
+  if (rels.length > 0) {
+    metadata.push(`**Relationships:** ${rels.join(", ")}`);
+  }
+
+  // Mentions (Who is linked in the text?)
+  const mentions = entity.mentions.map((m: any) => m.target.name);
+  if (mentions.length > 0) {
+    metadata.push(`**Mentions:** ${mentions.join(", ")}`);
+  }
+
+  if (metadata.length > 0) {
+    content += metadata.join(" | ") + "\n";
+  }
+
+  content += `\n---\n\n`;
+
+  // --- BODY ---
+  content += `### Description\n`;
+  content += `${toMarkdown(entity.entry)}\n\n`;
+
+  // --- SUB-POSTS ---
+  if (entity.posts && entity.posts.length > 0) {
+    content += `### Updates & Notes\n`;
+    for (const post of entity.posts) {
+      content += `#### ${post.name}\n`;
+      content += `${toMarkdown(post.entry)}\n\n`;
+    }
+  }
+
+  return content;
+}
+
 export async function generateWorldExport(worldId: number) {
   const zip = new JSZip();
 
-  // We map the DB 'type' string to a friendly filename and the prisma include key
+  // Categories that remain bundled into a single Markdown file each
   const categories = [
-    { type: "Character", filename: "Characters.md", model: "character" },
-    { type: "Location", filename: "Locations.md", model: "location" },
-    { type: "Family", filename: "Families.md", model: "family" },
-    { type: "Organisation", filename: "Organisations.md", model: "organisation" },
-    { type: "Item", filename: "Items.md", model: "item" },
-    { type: "Note", filename: "Notes.md", model: "note" },
-    { type: "Race", filename: "Races.md", model: "race" },
-    { type: "Journal", filename: "Journals.md", model: "journal" },
+    { type: "Character", filename: "Characters.md" },
+    { type: "Location", filename: "Locations.md" },
+    { type: "Family", filename: "Families.md" },
+    { type: "Organisation", filename: "Organisations.md" },
+    { type: "Item", filename: "Items.md" },
+    { type: "Note", filename: "Notes.md" },
+    { type: "Race", filename: "Races.md" },
   ];
 
-  // Iterate over categories and fetch data
   for (const cat of categories) {
     const entities = await prisma.entity.findMany({
       where: {
         worldId: worldId,
         type: cat.type,
       },
-      include: {
-        // We include specific tables to get metadata (like Character title/race)
-        character: {
-          include: {
-            race: { include: { entity: true } },
-            families: { include: { family: { include: { entity: true } } } },
-          },
-        },
-        location: true,
-        family: true,
-        organisation: true,
-        race: true,
-        
-        // Include relationships and mentions for context
-        relationshipsOut: { include: { target: true } },
-        mentions: { include: { target: true } },
-        
-        // Include child posts (updates/logs)
-        posts: { orderBy: { createdAt: 'asc' } },
-      },
-      orderBy: { name: 'asc' },
+      include: entityExportInclude,
+      orderBy: { name: "asc" },
     });
 
     if (entities.length === 0) continue;
 
-    let fileContent = "";
+    const fileContent = entities
+      .map(
+        (entity) =>
+          formatEntityMarkdown(entity) + `\n` + "=".repeat(40) + `\n\n`
+      )
+      .join("");
 
-    for (const entity of entities) {
-      // --- HEADER ---
-      fileContent += `# ${entity.name}\n`;
-      
-      // --- METADATA BLOCK ---
-      const metadata: string[] = [];
-
-      // Character Specifics
-      if (entity.character) {
-        if (entity.character.title) metadata.push(`**Title:** ${entity.character.title}`);
-        if (entity.character.race?.entity?.name) metadata.push(`**Race:** ${entity.character.race.entity.name}`);
-        
-        const familyNames = entity.character.families
-          .map((f) => f.family.entity.name)
-          .join(", ");
-        if (familyNames) metadata.push(`**Family:** ${familyNames}`);
-      }
-
-      // Relationships (e.g., "Sibling: Hoid")
-      const rels = entity.relationshipsOut.map((r) => `${r.type}: ${r.target.name}`);
-      if (rels.length > 0) metadata.push(`**Relationships:** ${rels.join(", ")}`);
-
-      // Mentions (Who is linked in the text?)
-      const mentions = entity.mentions.map((m) => m.target.name);
-      if (mentions.length > 0) metadata.push(`**Mentions:** ${mentions.join(", ")}`);
-
-      // Render Metadata
-      if (metadata.length > 0) {
-        fileContent += metadata.join(" | ") + "\n";
-      }
-
-      fileContent += `\n---\n\n`; // Separator
-
-      // --- BODY ---
-      fileContent += `### Description\n`;
-      fileContent += `${toMarkdown(entity.entry)}\n\n`;
-
-      // --- SUB-POSTS ---
-      if (entity.posts && entity.posts.length > 0) {
-        fileContent += `### Updates & Notes\n`;
-        for (const post of entity.posts) {
-          fileContent += `#### ${post.name}\n`;
-          fileContent += `${toMarkdown(post.entry)}\n\n`;
-        }
-      }
-
-      fileContent += `\n` + "=".repeat(40) + `\n\n`; // Big divider between entities
-    }
-
-    // Add to zip
     zip.file(cat.filename, fileContent);
   }
+
+  // Export each Journal entity as its own Markdown file inside Journals/
+  const journals = await prisma.entity.findMany({
+    where: {
+      worldId: worldId,
+      type: "Journal",
+    },
+    include: entityExportInclude,
+    orderBy: { createdAt: "asc" },
+  });
+
+  const usedFilenames = new Set<string>();
+  const padWidth = Math.max(2, String(journals.length).length);
+
+  journals.forEach((journal, index) => {
+    const prefix = String(index + 1).padStart(padWidth, "0");
+    const slug = sanitizeFilename(journal.name, journal.id);
+    let filename = `${prefix}-${slug}.md`;
+
+    // Guard against duplicate journal names overwriting each other in the zip
+    if (usedFilenames.has(filename)) {
+      filename = `${prefix}-${slug}-${journal.id}.md`;
+    }
+    usedFilenames.add(filename);
+
+    const journalContent = formatEntityMarkdown(journal);
+    zip.file(`Journals/${filename}`, journalContent);
+  });
 
   return zip.generateAsync({ type: "base64" });
 }
