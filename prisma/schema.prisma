@@ -146,10 +146,10 @@ model Relationship {
   id        Int      @id @default(autoincrement())
   sourceId  Int
   targetId  Int
-  type      String   
+  type      String  
   attitude  Int?
-  source    Entity   @relation("RelSource", fields: [sourceId], references: [id])
-  target    Entity   @relation("RelTarget", fields: [targetId], references: [id])
+  source    Entity   @relation("RelSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    Entity   @relation("RelTarget", fields: [targetId], references: [id], onDelete: Cascade)
   @@index([sourceId])
   @@index([targetId])
 }
@@ -159,24 +159,24 @@ model OrganisationMember {
   characterId    Int
   organisationId Int
   role           String?
-  character      Character    @relation(fields: [characterId], references: [entityId])
-  organisation   Organisation @relation(fields: [organisationId], references: [entityId])
+  character      Character    @relation(fields: [characterId], references: [entityId], onDelete: Cascade)
+  organisation   Organisation @relation(fields: [organisationId], references: [entityId], onDelete: Cascade)
 }
 
 model FamilyMember {
   id          Int       @id @default(autoincrement())
   characterId Int
   familyId    Int
-  character   Character @relation(fields: [characterId], references: [entityId])
-  family      Family    @relation(fields: [familyId], references: [entityId])
+  character   Character @relation(fields: [characterId], references: [entityId], onDelete: Cascade)
+  family      Family    @relation(fields: [familyId], references: [entityId], onDelete: Cascade)
 }
 
 model Mention {
   id       Int    @id @default(autoincrement())
   sourceId Int
   targetId Int
-  source   Entity @relation("MentionSource", fields: [sourceId], references: [id])
-  target   Entity @relation("MentionTarget", fields: [targetId], references: [id])
+  source   Entity @relation("MentionSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target   Entity @relation("MentionTarget", fields: [targetId], references: [id], onDelete: Cascade)
 }
 
 // ---------------------------------------------------------

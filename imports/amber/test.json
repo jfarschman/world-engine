@@ -1,0 +1,276 @@
+[
+  {
+    "name": "Avalon",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "Avalon is a legendary, idyllic Shadow realm of peace and prosperity that was once ruled and protected by Prince Benedict. Characterized by its lush apple orchards, medieval chivalric culture, and advanced metalworking, it serves as an emotional and historical sanctuary. In Avalon's past, Corwin fought a major campaign alongside Ganelon, defeating and banishing him before the realm was eventually lost to the encroaching forces of Chaos.\n\nWhile the original Avalon was destroyed or lost in deep Shadow, it exists as a powerful archetype in the minds of the royal family. Benedict maintains a deep, protective connection to its memory, and its geographical and cultural legacy continues to influence the kingdoms of the Golden Circle.",
+    "notes": [
+      {
+        "title": "Chivalric Culture",
+        "body": "Avalon is renowned for its chivalric knights, advanced metallurgy, and the legend of the silver arm."
+      }
+    ]
+  },
+  {
+    "name": "Begma",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "Begma is a prominent and highly developed kingdom located within the Golden Circle, serving as a vital buffer state and trading partner immediately adjacent to the realm of Amber. The environment is civilized, wealthy, and characterized by advanced architectural styles, busy urban centers, and extensive trade networks that utilize the Amber Imperial Pound. It is politically controlled by its sovereign ruler and represented at the Court of Amber by the highly shrewd and status-conscious Ambassador Orkuz.\n\nBegma's geopolitical significance is massive, as it is involved in a complex border dispute over the territory of Eregnor and holds deep ancestral ties to Amber's royal family. Princess Coral, the unacknowledged daughter of King Oberon and Kinta of Begma, grew up within its high-class society, making the kingdom a prized piece in the dynastic and territorial alliances of the Golden Circle.",
+    "notes": [
+      {
+        "title": "Eregnor Dispute",
+        "body": "Begma is engaged in a long-standing, high-stakes territorial and diplomatic dispute with Kashfa over the border province of Eregnor."
+      }
+    ]
+  },
+  {
+    "name": "Castle Amber",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "Castle Amber is the magnificent, multi-spired royal residence of the sovereign of Amber, perched majestically atop the coastal peak of Mount Kolvir. Constructed of green and golden stone, the palace spans four primary floors of luxury and ceremony, including grand drawing rooms, a double-height royal library, and a luxurious penthouse suite. Underneath the castle lies a damp, cavernous maze of dungeon cells, secret peg-ladders, and subterranean caverns that lead to the heavily fortified, metal-bound chamber containing the Primal Pattern.\n\nThe palace is under the absolute administrative and military control of the reigning monarch of Amber, supported by Lord Steward Henden, Mistress of Protocol Dame Margot, and the elite Amber Guard under Lord Danesh. It serves as the ultimate center of political power, cosmic stability, and dynastic intrigue in the universe, acting as the secure destination for anyone teleporting via royal Trump.",
+    "notes": [
+      {
+        "title": "Corridor of Mirrors",
+        "body": "A partially sentient architectural anomaly on the fourth floor that moves randomly during solstices and projects windows to other realities."
+      }
+    ]
+  },
+  {
+    "name": "City of Amber",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "The City of Amber is a bustling, wealthy coastal metropolis that wraps around the lower slopes of Mount Kolvir, covering roughly two square miles of land. It transitions from the high-class noble townhouses of East Vine to the commercial lanes of Smiths, Ironmongers, and Weavers Streets, culminating in the rough, low-income harbor district of Death Alley. The city's structure is linked by the grand Main Concourse, a broad thoroughfare lined with poles holding phosphorescent globes that runs from the massive Great Arch to the Palace gates.\n\nPolitically controlled by the reigning King of Amber, the city represents a living, working-class community that fuels the realm's economy, trading with Golden Circle kingdoms and merchant fleets. In the early books, it is described as a vague, emotional archetype, but the later books ground it with detailed economic infrastructure, neighborhood taverns like the Net, and restaurateurs like Bloody Eddie.",
+    "notes": [
+      {
+        "title": "Great Arch",
+        "body": "The monumental stone gateway serving as the principal entrance to the City of Amber, linking the upper districts to the sea."
+      }
+    ]
+  },
+  {
+    "name": "Forest of Arden",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "The Forest of Arden is a massive, ancient, and deeply dense pine woodland that blankets the northern and western approaches to Mount Kolvir and the City of Amber. The environment is majestic but highly treacherous, characterized by towering evergreen trees, winding mountain trails, and a monochromatic, barred quality that can disorient travelers. It is under the absolute territorial control of Prince Julian, who aggressively patrols its borders with a specialized ranger force and a pack of metal-tearing hellhounds.\n\nArden serves as the principal land defense for Castle Amber, making it nearly impossible for any hostile army to launch a land assault against the realm of Substance. The forest is also home to the sacred Grove of the Unicorn, a quiet, mystical glade that contains a trickling spring and serves as the primary sighting spot for the sentient emblem of Order.",
+    "notes": [
+      {
+        "title": "Grove of the Unicorn",
+        "body": "A sacred, highly protected glade southwest of Kolvir in Arden where the Unicorn of Order is seen."
+      }
+    ]
+  },
+  {
+    "name": "Kashfa",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "Kashfa is a rugged, politically volatile kingdom located within the Golden Circle, characterized by dense woodlands, high-altitude hills, and a history of intense dynastic coups. The environment is rustic and rustic-medieval, containing simple country homesteads and deep wilderness areas that hide magical anomalies. Historically ruled by the weak King Menillan, the kingdom fell under the absolute control of the sorceress Jasra following a bloody military coup spearheaded by Chief Jasrick.\n\nKashfa's significance in the lore is rooted in its strategic position near the Keep of the Four Worlds and its ongoing border dispute with Begma over the Eregnor province. Following a series of rebellions and the execution of the usurper Kasman, Prince Rinaldo (Luke) ascended the throne as King of Kashfa. Luke's pragmatic leadership transformed the kingdom from a war-torn rebel state into a highly prosperous, stable trading empire allied with Amber.",
+    "notes": [
+      {
+        "title": "Kashfan Coup",
+        "body": "Jasra used the palace guard and her sorcery to execute the local nobility and seize the crown, initiating a period of heavy militarism."
+      }
+    ]
+  },
+  {
+    "name": "Keep of the Four Worlds",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "The Keep of the Four Worlds is a towering, high-altitude mountain fortress located at a unique cosmic nexus where the elemental planes of earth, air, fire, and water pool into a glowing, magical reservoir known as the Fount of Power. The environment is highly hostile, characterized by blue crystal cliffs, extreme altitudes, and intense magical distortions. Control of the Keep represents absolute sorcerous supremacy, as the Fount grants whoever bathes in it god-like magical speed, teleportation, and reality-altering capabilities.\n\nThe Keep has historically been a highly contested prize, passing from the ancient sorcerer Sharu Garrul to the vengeful Queen Jasra, and ultimately to the blue-masked sorcerer Mask (Julia Barnes). It is the primary staging ground for the Chaos conspiracy, serving as the facility where Jurt underwent extreme magical body modifications to challenge Merlin.",
+    "notes": [
+      {
+        "title": "Fount of Power",
+        "body": "A glowing, highly volatile mystical reservoir that grants immense speed and sorcerous power to anyone who survives its energies."
+      }
+    ]
+  },
+  {
+    "name": "Lighthouse of Cabra",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "The Lighthouse of Cabra is a massive, lonely gray stone tower rising directly out of the open ocean, situated forty-three miles behind the left shoulder of Mount Kolvir. The environment is wind-swept, isolated, and characterized by the crashing waves of the sea, providing a quiet, meditative atmosphere. It is kept and controlled by Captain Jopin, a weathered former sea captain who maintains its guiding light to secure shipping lanes entering Amber's harbor.\n\nCabra's significance in the lore is deeply personal, as it served as the ultimate sanctuary for Prince Corwin following his blinding and escape from Eric's dungeons. Jopin's hospitable care and quiet guardianship allowed Corwin to fully regenerate his vision and plan his return to the realm in absolute secrecy, making it a pivotal turning point in his restoration campaign.",
+    "notes": [
+      {
+        "title": "Lighthouse Distance",
+        "body": "Located exactly forty-three miles from the coast of Amber, serving as the outermost navigational beacon for the realm."
+      }
+    ]
+  },
+  {
+    "name": "Lorraine",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "Lorraine is a medieval-style Shadow realm characterized by rolling green hills, small farming villages, and a high-stakes chivalric culture. The environment is highly superstitious and fearful, as the region's dimensional stability was heavily corrupted by the black stain of Corwin's death-curse, resulting in the encroachment of the demonic Black Circle. It is militarily managed by the cynical general Ganelon and defended by the local order of the Knights of Lorraine.\n\nLorraine serves as a major narrative transition point for Corwin, as he stops there during his return to Amber to rebuild his military forces and test his abilities. The campaign to cleanse Lorraine of the Black Circle's demonic corruption bridges the gap between Corwin's exile and his final return to the realm of Substance, illustrating the devastating impact of his death-curse across the Shadow landscape.",
+    "notes": [
+      {
+        "title": "Black Circle Corruption",
+        "body": "A malevolent cabal of sorcerers established a reality-tearing circle of corruption in Lorraine, summoning non-living monsters."
+      }
+    ]
+  },
+  {
+    "name": "Mount Kolvir",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "Mount Kolvir is the massive, coastal mountain that serves as the geological foundation for Castle and City Amber. The mountain's seaward face is a sheer, vertical cliff of grey stone, while its landward slopes hold the residential districts and streets of the City. Kolvir represents the physical center of the true world of Substance, acting as the anchor that stabilizes reality across infinite Shadows.\n\nControlled absolutely by the Crown of Amber, Kolvir features several historic defensive structures, including the dizzying Eastern Stair zigzagging up its sheer cliff face and the Great Arch gateway. Deep beneath its roots lies the subterranean chamber of the Primal Pattern, making the mountain both a military fortress and a cosmic temple of Order.",
+    "notes": [
+      {
+        "title": "Eastern Stair",
+        "body": "A historic, dizzying staircase carved directly into the seaward face of Mount Kolvir, leading straight up to Land's End."
+      }
+    ]
+  },
+  {
+    "name": "Rebma",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "Rebma is the stunning underwater mirror-city of Amber, located directly beneath the adjacent sea. The environment is a surreal, magical reflection of Castle and City Amber, lit by glowing pillar flames and containing octagonal tinted windows where guests walk among swimming fish without needing to breathe. It is under the absolute sovereign rule of Queen Moire, who governs her watery court with strict traditional protocols and a deep-seated suspicion of the surface royals.\n\nRebma holds immense cosmic and political significance, as it contains a complete, functional reflection of the Primal Pattern. This underwater Pattern serves as a vital resource for the royal family, allowing exiled or amnesiac heirs like Corwin to walk it and fully restore their memories. The city is accessed via the Faiella-bionin, a set of dizzying underwater steps carved into the base of Kolvir.",
+    "notes": [
+      {
+        "title": "Faiella-bionin",
+        "body": "The dizzying, underwater staircase carved into the ocean floor that allows travelers to walk down to the underwater city of Rebma."
+      }
+    ]
+  },
+  {
+    "name": "Shadow Earth",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "Shadow Earth is the mundane, technologically advanced reality that serves as a distant, mortal reflection of the true world of Amber. The environment is highly familiar, consisting of modern cities like New York, San Francisco, and Brussels, where the laws of physics prevent magic from functioning normally. It is not controlled by any single supernatural entity, instead operating under the secular authority of mortal governments, though various Amber and Chaos royals maintain private estates and alter-egos there.\n\nEarth is of immense strategic and narrative significance in the Chronicles; it is where Corwin spent centuries of amnesiac exile as Carl Corey, and where Prince Merlin lived under an alias to study computer engineering and construct Ghostwheel. Flora Westchester's estate serves as a watchful monitoring post, and Brussels provides the specialized ammunition capable of bypassing Amber's local physical laws.",
+    "notes": [
+      {
+        "title": "Westchester Estate",
+        "body": "Princess Flora's luxury estate in Westchester, New York, which served as a secure base of operations and monitoring post on Earth."
+      }
+    ]
+  },
+  {
+    "name": "The Courts of Chaos",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "The Courts of Chaos is the primordial, highly malleable realm of absolute flux situated at the opposite pole of the universe from Amber. Floating precariously over the bottomless, terrifying void of the Pit (Abyss), the Courts are characterized by a surreal landscape where time runs faster, the sky turns through cyclical colors (red, white, blue, purple), and noble Houses are constructed directly from manipulated Shadow. The realm is ruled by the sovereign monarch of Chaos from the glassy needle citadel of Thelbane, heavily influenced by the high priesthood of the Cathedral of the Serpent.\n\nAs the cosmic birthplace of the Logrus, the Courts represent the ultimate source of entropic energy and shape-shifting magic. The politics of the Courts are defined by a centuries-long, cold-war struggle against the Primal Pattern of Amber. Following King Swayvill's death and a bloody succession crisis among the noble houses, Merlin ascended the throne of Chaos as an independent sovereign.",
+    "notes": [
+      {
+        "title": "Thelbane Citadel",
+        "body": "The massive, dark, glassy needle fortress that serves as the royal palace and political center of the Courts of Chaos."
+      },
+      {
+        "title": "Pit of Chaos",
+        "body": "The bottomless Abyss of absolute nothingness at the physical edge of the Rim, into which the forces of entropy pool."
+      }
+    ]
+  },
+  {
+    "name": "Tir-na Nog'th",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "Tir-na Nog'th is the shimmering, translucent ghost-city of Amber that manifests in the clouds over Mount Kolvir only during clear moonlit nights. The environment is silent, expressionistic, and monochromatic, lit by the pale glow of the moon where guests walk along a translucent staircase extending over the sea. It is not controlled by any mortal sovereign, operating instead as a semi-sentient, expressionistic playground of the Pattern that projects solid dreams, omens, and prophecies.\n\nTir-na Nog'th holds immense mystical significance, as it contains a phantom reflection of the Primal Pattern. Walking this sky-Pattern can grant deep insight or deliver highly dangerous, reality-altering encounters. It is where Benedict retrieved his mechanical arm, and where Dalt successfully walked the Pattern to cement his royal lineage as a son of Amber.",
+    "notes": [
+      {
+        "title": "Translucent Stairs",
+        "body": "Three rough stone steps carved into the peak of Mount Kolvir that extend into a ghostly, translucent staircase leading into the sky-city."
+      }
+    ]
+  },
+  {
+    "name": "Valley of Garnath",
+    "type": "Location",
+    "role": null,
+    "title": null,
+    "age": null,
+    "race": null,
+    "family": null,
+    "organisation": null,
+    "isDead": false,
+    "description": "The Valley of Garnath is a lush, hundred-mile-wide valley that slopes gently southward from the foot of Mount Kolvir to the shore of the sea. Bisected by the River Oisen, the valley historically served as the primary, peaceful agricultural corridor of the realm, supplying Amber with food and resources. It was under the absolute control of the Crown of Amber, serving as a peaceful agricultural province.\n\nHowever, Garnath's significance is marked by tragedy, as it was heavily scorched and corrupted by Corwin's bitter death-curse. The curse opened the Black Road through the valley's center, turning it into a blackened, ash-filled wasteland where monstrous, non-living creatures from Chaos launched regular incursions, transforming a peaceful valley into a bloody front-line battleground.",
+    "notes": [
+      {
+        "title": "The Black Road",
+        "body": "The reality-tearing path opened by Corwin's death-curse that cut straight through Garnath, linking Chaos directly to Amber."
+      }
+    ]
+  }
+]
