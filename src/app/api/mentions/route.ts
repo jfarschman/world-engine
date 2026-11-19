@@ -13,10 +13,12 @@ export async function GET(request: Request) {
 
   try {
     const world = await getCurrentWorld();
+    const canSeePrivate = ['ADMIN', 'DM', 'PLAYER'].includes(world.myRole);
 
     const results = await prisma.entity.findMany({
       where: {
-        worldId: world.id, 
+        worldId: world.id,
+        ...(canSeePrivate ? {} : { is_private: false }),
         name: {
           contains: query,
           mode: 'insensitive',
@@ -27,14 +29,14 @@ export async function GET(request: Request) {
       orderBy: { name: 'asc' },
     });
 
-    const formatted = results.map(entity => ({
+    const formatted = results.map((entity) => ({
       id: entity.id,
-      label: entity.name, 
+      label: entity.name,
     }));
 
     return NextResponse.json(formatted);
   } catch (error) {
     // Return empty array instead of 500 to keep Editor alive
-    return NextResponse.json([]); 
+    return NextResponse.json([]);
   }
 }
