@@ -8,6 +8,12 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { getCurrentWorld } from '@/lib/get-current-world'; // [NEW] Import permissions
 
+const ALLOWED_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']);
+const rawExt = (imageFile.name.split('.').pop() || '').toLowerCase();
+if (!ALLOWED_EXTS.has(rawExt)) {
+  throw new Error('Unsupported image format');
+}
+
 // --- HELPER: Gatekeeper ---
 // This ensures only Admins/DMs of the CURRENT world can perform actions.
 async function assertPermission() {
